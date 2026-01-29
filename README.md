@@ -68,4 +68,5 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 ## 테스트·배포
 
 - **단위·통합 테스트**: `./gradlew test`. order-service 통합 테스트는 Testcontainers MySQL + MockWebServer 사용(Docker 필요).
+- **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 - **K8s 예시**: [`k8s/README.md`](k8s/README.md), `k8s/order-service.yaml` (Deployment + Service, 헬스체크).

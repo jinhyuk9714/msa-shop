@@ -263,6 +263,11 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 - **OrderControllerIntegrationTest**: Testcontainers MySQL + MockWebServer(product/payment). `@SpringBootTest(webEnvironment = RANDOM_PORT)`, `@ServiceConnection` MySQL, `@DynamicPropertySource`로 product/payment base-url. POST /orders (X-User-Id) → 201, GET /orders/{id} → 200 검증. 실행 시 Docker 필요.
 
+### CI (GitHub Actions)
+
+- **워크플로**: `.github/workflows/ci.yml`. `main` 브랜치 푸시·PR 시 자동 실행.
+- **내용**: JDK 21(Temurin), Gradle 캐시, `./gradlew test`. order-service 통합 테스트는 runner의 Docker에서 Testcontainers로 실행.
+
 ---
 
 ## 관측성 (Observability)
