@@ -1,7 +1,9 @@
 rootProject.name = "msa-shop"
 
+include("api-gateway")
 include("user-service")
 include("product-service")
 include("order-service")
 include("payment-service")
+include("settlement-service")
 

@@ -7,9 +7,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -25,24 +26,30 @@ class UserServiceTest {
     @Mock
     UserRepository userRepository;
 
-    @InjectMocks
+    PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     UserService userService;
+
+    @BeforeEach
+    void setUp() {
+        userService = new UserService(userRepository, passwordEncoder);
+    }
 
     @Nested
     @DisplayName("회원가입")
     class Register {
 
         @Test
-        @DisplayName("성공 시 사용자 저장 후 반환")
+        @DisplayName("성공 시 비밀번호 해싱 후 저장·반환")
         void success() {
             when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
-            User saved = new User("new@test.com", "pw123", "신규");
-            when(userRepository.save(any(User.class))).thenReturn(saved);
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
             User result = userService.register("new@test.com", "pw123", "신규");
 
             assertThat(result.getEmail()).isEqualTo("new@test.com");
             assertThat(result.getName()).isEqualTo("신규");
+            assertThat(result.getPassword()).startsWith("$2a$");
+            assertThat(result.getPassword()).isNotEqualTo("pw123");
             verify(userRepository).save(any(User.class));
         }
 
@@ -65,7 +72,8 @@ class UserServiceTest {
         @Test
         @DisplayName("성공 시 사용자 반환")
         void success() {
-            User user = new User("a@test.com", "pw123", "이름");
+            String encoded = passwordEncoder.encode("pw123");
+            User user = new User("a@test.com", encoded, "이름");
             when(userRepository.findByEmail("a@test.com")).thenReturn(Optional.of(user));
 
             User result = userService.login("a@test.com", "pw123");
@@ -86,7 +94,8 @@ class UserServiceTest {
         @Test
         @DisplayName("비밀번호 틀리면 IllegalArgumentException")
         void wrongPassword() {
-            User user = new User("a@test.com", "correct", "이름");
+            String encodedCorrect = passwordEncoder.encode("correct");
+            User user = new User("a@test.com", encodedCorrect, "이름");
             when(userRepository.findByEmail("a@test.com")).thenReturn(Optional.of(user));
 
             assertThatThrownBy(() -> userService.login("a@test.com", "wrong"))

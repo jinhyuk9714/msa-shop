@@ -24,8 +24,10 @@ product-service:
 payment-service:
   base-url: http://localhost:8084
 
-# Outbox: 보상 이벤트 처리 주기(ms). 결제 성공 후 주문 저장 실패 시 스케줄러가 결제 취소·재고 복구 수행
+# JWT: user-service와 동일한 secret 사용. Bearer JWT 검증·userId 추출.
 app:
+  jwt:
+    secret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
   outbox:
     process-interval: 5000
 

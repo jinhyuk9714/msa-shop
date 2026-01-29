@@ -1,6 +1,8 @@
 package com.msa.shop.user.api;
 
+import com.msa.shop.user.application.InvalidTokenException;
 import com.msa.shop.user.application.UserService;
+import com.msa.shop.user.config.JwtService;
 import com.msa.shop.user.domain.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,27 +31,31 @@ record MeResponse(Long id, String email, String name) {
 
 /**
  * user-service HTTP API 진입점.
- * - 회원가입, 로그인, 내 정보 조회 제공.
- * - 현재는 더미 토큰(dummy-token-for-user-{id}) 사용. 추후 JWT로 교체 예정.
+ * - 회원가입, 로그인(JWT 발급), 내 정보 조회(JWT 검증).
  */
 @RestController
 @RequestMapping
 public class UserController {
 
     private final UserService userService;
+    private final JwtService jwtService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
     }
 
     /**
-     * 내 정보 조회. Authorization 헤더에서 userId 추출 후 DB 조회.
-     * - 토큰 없거나 형식 오류 → InvalidTokenException → 401
+     * 내 정보 조회. API Gateway 경유 시 X-User-Id, 직접 호출 시 Authorization Bearer JWT.
+     * - 토큰/헤더 없거나 형식 오류 → InvalidTokenException → 401
      * - 사용자 없음 → UserNotFoundException → 404
      */
     @GetMapping("/users/me")
-    public ResponseEntity<MeResponse> getMe(@RequestHeader("Authorization") String authorization) {
-        Long userId = extractUserIdFromToken(authorization);
+    public ResponseEntity<MeResponse> getMe(
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        Long userId = resolveUserId(xUserId, authorization);
         var user = userService.getUser(userId);
         return ResponseEntity.ok(MeResponse.from(user));
     }
@@ -62,34 +68,31 @@ public class UserController {
                 .body(RegisterUserResponse.from(user));
     }
 
-    /**
-     * 로그인. 성공 시 더미 액세스 토큰 발급.
-     * - order-service 등에서 "Bearer {token}"으로 userId 파싱할 때 이 규칙 사용.
-     */
+    /** 로그인. 성공 시 JWT 액세스 토큰 발급. order-service 등에서 Bearer JWT로 검증·userId 추출. */
     @PostMapping("/auth/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         User user = userService.login(request.email(), request.password());
-        String dummyToken = "dummy-token-for-user-" + user.getId();
-        return ResponseEntity.ok(new LoginResponse(dummyToken));
+        String accessToken = jwtService.generateToken(user.getId(), user.getEmail());
+        return ResponseEntity.ok(new LoginResponse(accessToken));
     }
 
-    /**
-     * Authorization: Bearer dummy-token-for-user-{id} 에서 userId(Long) 추출.
-     * 형식 오류 시 InvalidTokenException → 401.
-     */
+    /** Gateway 경유 시 X-User-Id, 직접 호출 시 Authorization Bearer JWT. */
+    private Long resolveUserId(String xUserId, String authorization) {
+        if (xUserId != null && !xUserId.isBlank()) {
+            try {
+                return Long.parseLong(xUserId.trim());
+            } catch (NumberFormatException e) {
+                throw new InvalidTokenException("X-User-Id가 올바르지 않습니다.");
+            }
+        }
+        return extractUserIdFromToken(authorization);
+    }
+
     private Long extractUserIdFromToken(String authorizationHeader) {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            throw new com.msa.shop.user.application.InvalidTokenException("Authorization 헤더가 올바르지 않습니다.");
+            throw new InvalidTokenException("Authorization 헤더가 올바르지 않습니다.");
         }
-        String token = authorizationHeader.substring("Bearer ".length());
-        String prefix = "dummy-token-for-user-";
-        if (!token.startsWith(prefix)) {
-            throw new com.msa.shop.user.application.InvalidTokenException("토큰 형식이 올바르지 않습니다.");
-        }
-        try {
-            return Long.parseLong(token.substring(prefix.length()));
-        } catch (NumberFormatException e) {
-            throw new com.msa.shop.user.application.InvalidTokenException("토큰 형식이 올바르지 않습니다.");
-        }
+        String token = authorizationHeader.substring("Bearer ".length()).trim();
+        return jwtService.parseUserIdFromToken(token);
     }
 }

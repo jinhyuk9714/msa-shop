@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:settlementdb;MODE=MYSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 8085
+
+# 배치 Job 스케줄 (cron)
+app:
+  batch:
+    daily-cron: "0 10 0 * * ?" # 매일 00:10 - 전일 일별 row 보정
+    monthly-cron: "0 0 1 1 * ?" # 매월 1일 01:00 - 전월 월별 집계

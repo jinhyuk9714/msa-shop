@@ -1,13 +1,72 @@
 # 빌드: 프로젝트 루트에서 docker-compose up --build
-# E2E: ./scripts/e2e-flow.sh (호스트 localhost:8081~8084)
+# E2E: ./scripts/e2e-flow.sh (직접) 또는 GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh (Gateway 경유)
+# API Gateway: 8080 (클라이언트 단일 진입점). DB: MySQL 8 (서비스별 DB)
 
 services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      USER_SERVICE_URI: http://user-service:8081
+      PRODUCT_SERVICE_URI: http://product-service:8082
+      ORDER_SERVICE_URI: http://order-service:8083
+      APP_JWT_SECRET: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   user-service:
     build:
       context: .
       dockerfile: user-service/Dockerfile
     ports:
       - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      APP_JWT_SECRET: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   product-service:
     build:
@@ -15,6 +74,14 @@ services:
       dockerfile: product-service/Dockerfile
     ports:
       - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/productdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   payment-service:
     build:
@@ -22,6 +89,41 @@ services:
       dockerfile: payment-service/Dockerfile
     ports:
       - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  settlement-service:
+    build:
+      context: .
+      dockerfile: settlement-service/Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/settlementdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   order-service:
     build:
@@ -30,8 +132,17 @@ services:
     ports:
       - "8083:8083"
     environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/orderdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      APP_JWT_SECRET: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
       PRODUCT_SERVICE_BASE_URL: http://product-service:8082
       PAYMENT_SERVICE_BASE_URL: http://payment-service:8084
     depends_on:
-      - product-service
-      - payment-service
+      mysql:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      payment-service:
+        condition: service_started

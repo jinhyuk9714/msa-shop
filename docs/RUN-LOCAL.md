@@ -28,14 +28,16 @@ gradle wrapper
 
 **터미널 4개**에서 각각 실행 (또는 IDE에서 Run).
 
-| 터미널 | 명령                                 | 포트 |
-| ------ | ------------------------------------ | ---- |
-| 1      | `./gradlew :user-service:bootRun`    | 8081 |
-| 2      | `./gradlew :product-service:bootRun` | 8082 |
-| 3      | `./gradlew :payment-service:bootRun` | 8084 |
-| 4      | `./gradlew :order-service:bootRun`   | 8083 |
+| 터미널 | 명령                                                                        | 포트                     |
+| ------ | --------------------------------------------------------------------------- | ------------------------ |
+| 1      | `./gradlew :user-service:bootRun`                                           | 8081                     |
+| 2      | `./gradlew :product-service:bootRun`                                        | 8082                     |
+| 3      | `./gradlew :payment-service:bootRun`                                        | 8084                     |
+| 4      | `./gradlew :order-service:bootRun`                                          | 8083                     |
+| 5      | `./gradlew :settlement-service:bootRun`                                     | 8085 (선택, 매출 집계용) |
+| (선택) | RabbitMQ: `docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management` | 5672, 15672              |
 
-기동 순서는 무관. **order-service**는 product / payment 에 연결하므로, 최소한 product·payment 가 먼저 떠 있는 편이 좋다.
+기동 순서는 무관. **order-service**는 product / payment 에 연결. **payment-service**는 결제 완료 시 **RabbitMQ**로 이벤트 발행. settlement-service를 쓸 경우 RabbitMQ를 먼저 띄우고 payment·settlement를 기동해야 한다. RabbitMQ 미기동 시 발행 실패 로그만 남고 결제는 성공 처리.
 
 ## 4. E2E 시나리오 실행
 
@@ -45,14 +47,15 @@ gradle wrapper
 ./scripts/e2e-flow.sh
 ```
 
-**재실행 시**: 이미 `test@test.com` 으로 가입했다면 2번(회원가입)에서 에러가 날 수 있다. 이때는 3번(로그인)부터 수동으로 진행하거나, 이메일을 바꿔서 회원가입하면 된다.
+**재실행 시**: 이미 `test@test.com` 으로 가입했다면 2번(회원가입)에서 409가 날 수 있다. 이때는 3번(로그인)부터 진행하면 된다.  
+**BCrypt 전환 후**: 예전에 평문 비밀번호로 가입한 계정은 로그인이 안 된다. 아래 "BCrypt 전환 후 기존 계정" 참고.
 
 동작 요약:
 
 1. **상품 목록** `GET /products` (product-service, 시딩된 테스트 상품 조회)
 2. **회원가입** `POST /users` (user-service)
-3. **로그인** `POST /auth/login` → `accessToken` (더미 토큰) 획득
-4. **주문 생성** `POST /orders` (order-service, Bearer 토큰 + productId=1, quantity=2)
+3. **로그인** `POST /auth/login` → `accessToken` (JWT) 획득
+4. **주문 생성** `POST /orders` (order-service, Bearer JWT + productId=1, quantity=2)
 5. 성공 시 **주문 단건 조회** `GET /orders/{id}`
 
 ### 환경 변수 (기본값: localhost)
@@ -70,7 +73,7 @@ curl 예시:
 
 ```bash
 # 로그인 후 TOKEN 설정
-TOKEN="dummy-token-for-user-1"
+TOKEN="<로그인 응답의 accessToken(JWT)을 여기에 넣기>"
 
 # 재고 부족 (상품 3, 수량 10)
 curl -s -X POST http://localhost:8083/orders \
@@ -79,23 +82,32 @@ curl -s -X POST http://localhost:8083/orders \
   -d '{"productId":3,"quantity":10,"paymentMethod":"CARD"}'
 ```
 
-## 6. Docker Compose로 4서비스 기동 (선택)
+## 6. Docker Compose로 API Gateway + 5서비스 + MySQL 기동 (선택)
 
-Docker·Docker Compose가 설치돼 있다면, 한 번에 네 서비스를 띄울 수 있다.
+Docker·Docker Compose가 설치돼 있다면, **MySQL 8**과 다섯 서비스를 한 번에 띄울 수 있다.
 
 ```bash
 docker-compose up --build -d
 ```
 
-**호스트 포트**: 8081(user), 8082(product), 8083(order), 8084(payment). 로컬 서버를 끄고 Docker만 사용할 때 80번대 포트 사용.
+- **API Gateway**: 포트 **8080**. 클라이언트 단일 진입점. `/users/**`, `/auth/**` → user-service, `/products/**` → product-service, `/orders/**` → order-service. JWT 검증 후 `X-User-Id` 헤더로 downstream 전달.
+- **MySQL**: 포트 3306. 최초 기동 시 `docker/mysql/init/01-create-databases.sql`로 5개 DB 생성.
+- **RabbitMQ**: 포트 5672(AMQP), 15672(관리 UI). 결제 완료 이벤트는 payment-service → RabbitMQ → settlement-service로 전달.
+- **호스트 포트**: 8080(gateway), 8081(user), 8082(product), 8083(order), 8084(payment), 8085(settlement), 5672(rabbitmq), 15672(rabbitmq-management).
 
-기동 후 E2E:
+기동 후 E2E (Gateway 경유, 권장):
+
+```bash
+GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
+```
+
+직접 서비스 호출(기존 방식):
 
 ```bash
 ./scripts/e2e-flow.sh
 ```
 
-order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너에 연결한다.
+order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너에 연결한다. 로컬에서만 서비스 띄울 때는 기본값 **H2 메모리 DB**를 사용한다.
 
 종료:
 
@@ -106,5 +118,26 @@ docker-compose down
 ## 7. 트러블슈팅
 
 - **Connection refused**: 해당 서비스 포트가 열려 있는지, `bootRun` 이 완료됐는지 확인.
-- **401 / 토큰 오류**: `POST /auth/login` 응답의 `accessToken`을 그대로 `Authorization: Bearer {token}` 에 넣었는지 확인.
+- **401 / 토큰 오류**: `POST /auth/login` 응답의 `accessToken`(JWT)을 그대로 `Authorization: Bearer {token}` 에 넣었는지 확인. 만료된 JWT면 재로그인.
 - **상품 없음**: product-service `ProductDataLoader` 가 테스트 상품 3종을 시딩함. H2 재시작 시 다시 들어감.
+- **Docker MySQL 연결 실패**: MySQL 컨테이너가 healthy 된 뒤 서비스가 기동하므로, `docker-compose up` 후 잠시 기다렸다가 E2E 실행.
+
+### BCrypt 전환 후 기존 계정 로그인 안 될 때
+
+비밀번호를 BCrypt로 저장하도록 바꾼 뒤에는, **그 전에 평문으로 저장된 계정**은 로그인할 수 없습니다. 아래 둘 중 하나로 맞추면 됩니다.
+
+**방법 1: 새로 회원가입해서 E2E 돌리기**
+
+- **다른 이메일로 가입**: E2E 스크립트는 `test@test.com` 을 쓰므로, 스크립트를 수정해 새 이메일(예: `test2@test.com`)을 쓰거나,
+- **기존 DB 유지한 채** `test@test.com` 은 쓰지 않고, **회원가입(2번)부터 새 이메일로 수동**으로 한 뒤 3번(로그인)~5번을 진행합니다.
+- 또는 **방법 2**처럼 user DB만 비운 뒤 E2E를 그대로 실행하면, 2번에서 `test@test.com` 이 새로 가입되고 BCrypt로 저장되어 3번 로그인이 됩니다.
+
+**방법 2: DB 비우고 E2E 처음부터 돌리기**
+
+- **Docker Compose 사용 중이면**
+  1. `docker-compose down -v` 로 컨테이너와 **볼륨까지 삭제** (MySQL 데이터 초기화).
+  2. `docker-compose up -d` 로 다시 기동 (MySQL 초기화 스크립트로 DB 재생성).
+  3. `./scripts/e2e-flow.sh` 실행 → 회원가입(2번)에서 `test@test.com` 이 새로 가입되고, 비밀번호가 BCrypt로 저장되어 로그인·주문까지 진행됩니다.
+- **로컬에서 H2로 서비스만 띄운 경우**
+  - user-service를 **한 번 종료했다가 다시** `./gradlew :user-service:bootRun` 으로 기동하면 H2 메모리 DB가 비워집니다.
+  - 그 다음 `./scripts/e2e-flow.sh` 를 실행하면 2번에서 새로 가입·BCrypt 저장 후 3번 로그인이 됩니다.

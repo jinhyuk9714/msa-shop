@@ -5,6 +5,7 @@
 - **1단계**: Gradle 멀티 모듈, Wrapper, user/product/order/payment 4서비스, E2E `scripts/e2e-flow.sh`, 필수 단위 테스트. order-service 예외/상태코드(409·402·404·401), Resilience4j, GET /users/me, GET /orders/me. SAGA 보상(결제 실패 시 재고 복구), product `POST /internal/stocks/release`. order-service 테스트: paymentFails MockWebServer 전환, mockwebserver 의존성.
 - **Docker Compose**: Dockerfile 4개(멀티 모듈 루트 빌드), docker-compose.yml(8081~8084), order-service 환경변수로 product/payment 호스트명 연결. E2E: `./scripts/e2e-flow.sh`. 상세 `docs/RUN-LOCAL.md` §6.
 - **2단계(Outbox·보상)**: payment-service `POST /payments/{id}/cancel` 추가. order-service Outbox 테이블(`outbox_events`), 결제 성공 후 주문 저장 실패 시 `OutboxService.publishOrderSaveFailed` → `OutboxProcessor` 스케줄러(5s)가 결제 취소·재고 복구 수행. 테스트: `orderSaveFailsThenOutboxPublished` 추가.
+- **settlement-service**: 결제 완료 이벤트 수신(POST /internal/events/payment-completed), 일별 매출 집계(DailySettlement). payment-service가 결제 승인 후 settlement 호출. Docker Compose에 settlement-service(8085) 추가, payment-service에 SETTLEMENT_SERVICE_BASE_URL 설정.
 
 ---
 
@@ -18,7 +19,7 @@
   - (user-service) Spring Security
   - (order-service) Resilience4j (`@Retry`, `@CircuitBreaker`)
 - **DB**
-  - 각 서비스별 H2 메모리 DB (MySQL MODE, 추후 MySQL 전환 예정)
+  - 로컬 단독 실행: 각 서비스별 H2 메모리 DB (MySQL MODE). **Docker Compose 실행 시**: MySQL 8 한 컨테이너에 서비스별 DB(userdb, productdb, orderdb, paymentdb, settlementdb) 사용.
 
 ---
 
@@ -36,7 +37,7 @@
 ## user-service
 
 - **포트**: 8081
-- **주요 책임**: 회원 관리, 로그인(현재는 더미 토큰 발급)
+- **주요 책임**: 회원 관리, 로그인(JWT 발급). 비밀번호 BCrypt 해싱 저장·검증.
 
 ### 도메인
 
@@ -54,13 +55,13 @@
     (`DuplicateEmailException` → `UserControllerAdvice`)
 
 - `POST /auth/login`
-  - 로그인(간단한 검증 후 더미 액세스 토큰 발급)
+  - 로그인(검증 후 JWT 액세스 토큰 발급, JJWT HS256)
   - Request: `{ "email", "password" }`
-  - Response: `{ "accessToken": "dummy-token-for-user-{id}" }`
+  - Response: `{ "accessToken": "<JWT>" }` (payload: sub=email, userId, exp)
 
 - `GET /users/me`
-  - 내 정보 조회. `Authorization: Bearer dummy-token-for-user-{id}` 필수.
-  - Response: `{ "id", "email", "name" }`. 토큰 오류 시 401, 사용자 없음 시 404.
+  - 내 정보 조회. `Authorization: Bearer <JWT>` 필수. JWT 검증 후 userId로 DB 조회.
+  - Response: `{ "id", "email", "name" }`. 토큰 오류/만료 시 401, 사용자 없음 시 404.
 
 ### 보안 설정
 
@@ -160,8 +161,9 @@
 ### 주문 플로우 (`POST /orders`)
 
 1. **인증 정보에서 userId 추출**
-   - `Authorization: Bearer dummy-token-for-user-{id}`
-   - 현재는 user-service가 발급하는 **더미 토큰 규약**에 맞춰 단순 파싱
+   - `Authorization: Bearer <JWT>`
+
+- user-service가 발급한 **JWT**를 order-service에서 동일 secret(app.jwt.secret)으로 검증·userId 추출
 
 2. **상품 정보 조회**
    - `GET product-service /products/{id}`
@@ -183,7 +185,7 @@
 
 - `POST /orders`
   - Request 헤더:
-    - `Authorization: Bearer dummy-token-for-user-{id}`
+    - `Authorization: Bearer <JWT>`
   - Body: `{ "productId", "quantity", "paymentMethod" }`
   - 성공 시:
     - 201 Created + 주문 정보 반환
@@ -194,7 +196,7 @@
   - 주문 단건 조회. 없으면 404.
 
 - `GET /orders/me`
-  - 내 주문 목록. `Authorization: Bearer dummy-token-for-user-{id}` 필수. `createdAt` 내림차순.
+  - 내 주문 목록. `Authorization: Bearer <JWT>` 필수. `createdAt` 내림차순.
 
 order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 402, 주문 없음 → 404, 토큰 오류 → 401.
 
@@ -215,14 +217,13 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 1. **user-service 실행 후 회원가입/로그인**
    - `POST /users` 로 회원가입
-   - `POST /auth/login` 으로 로그인 후 `accessToken` 획득  
-     → 값 예시: `dummy-token-for-user-1`
+   - `POST /auth/login` 으로 로그인 후 `accessToken`(JWT) 획득
 
 2. **product-service**
    - `ProductDataLoader` 로 테스트 상품 자동 등록 (별도 입력 불필요)
 
 3. **order-service로 주문 생성**
-   - 헤더: `Authorization: Bearer dummy-token-for-user-1`
+   - 헤더: `Authorization: Bearer <accessToken>`
    - `POST /orders`  
      Body: `{ "productId": 1, "quantity": 2, "paymentMethod": "CARD" }`
 
@@ -249,12 +250,21 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ---
 
+## API Gateway (3단계)
+
+- **포트**: 8080. 클라이언트 단일 진입점.
+- **역할**: Spring Cloud Gateway로 `/users/**`, `/auth/**` → user-service, `/products/**` → product-service, `/orders/**` → order-service 라우팅.
+- **JWT 검증**: `/orders/**`, `/users/me` 요청 시 `Authorization: Bearer` JWT 검증 후 `X-User-Id` 헤더로 downstream 전달. user-service와 동일 `app.jwt.secret` 사용.
+- **order-service / user-service**: `X-User-Id` 헤더가 있으면 사용, 없으면 기존처럼 JWT 파싱(직접 호출·E2E 호환).
+
+---
+
 ## Docker Compose
 
-- **docker-compose.yml**: user / product / order / payment 네 서비스. 루트에서 `docker-compose up --build -d` 실행.
-- **Dockerfile** (각 서비스 디렉터리): 멀티 모듈 루트를 빌드 컨텍스트로, `./gradlew :user-service:build` 등 실행 후 JAR만 복사해 실행.
-- **order-service**: `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너 호스트명 연결.
-- **E2E**: 기동 후 `./scripts/e2e-flow.sh`. 상세는 `docs/RUN-LOCAL.md` §6.
+- **docker-compose.yml**: **api-gateway(8080)** + MySQL 8 + user / product / order / payment / settlement. 루트에서 `docker-compose up --build -d` 실행.
+- **api-gateway**: user·product·order 서비스 기동 후 기동. `USER_SERVICE_URI`, `PRODUCT_SERVICE_URI`, `ORDER_SERVICE_URI` 로 라우팅.
+- **MySQL**: 이미지 `mysql:8`, 초기화 스크립트로 5개 DB 생성. MySQL healthcheck 통과 후 서비스 기동.
+- **E2E**: Gateway 경유 `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh`. 직접 호출 `./scripts/e2e-flow.sh`. 상세는 `docs/RUN-LOCAL.md` §6.
 
 ---
 
@@ -269,9 +279,31 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ---
 
+## settlement-service
+
+- **포트**: 8085
+- **역할**: 결제 완료 이벤트 수신(RabbitMQ 구독) → 일별 매출 집계(daily_settlements 테이블).
+
+### API
+
+- 결제 완료 이벤트는 **RabbitMQ**로 수신. Exchange `payment.events`, Queue `settlement.payment.completed`, Routing Key `payment.completed`. `PaymentCompletedListener`가 메시지 수신 시 `recordPaymentCompleted` 호출.
+- `GET /settlements/daily?date=yyyy-MM-dd`  
+  특정 일자 집계. 없으면 404.
+- `GET /settlements/daily`  
+  date 없으면 최근 일별 집계 목록(최대 30, 날짜 내림차순).
+
+### payment-service 연동 (이벤트 드리븐)
+
+- 결제 승인(`approve`) 성공 후 **RabbitMQ** Topic Exchange `payment.events`로 `PaymentCompletedEvent`(paymentId, userId, amount, paidAt) 발행. settlement-service가 Queue `settlement.payment.completed`에서 구독해 매출 집계. 발행 실패 시 로그만 남기고 결제는 성공 유지.
+
+---
+
 ## 앞으로의 확장 아이디어 (2단계용 메모)
 
 - ~~Outbox 패턴 도입 및 주문/결제 보상 트랜잭션 구현~~ (위에서 구현)
-- 결제 완료 이벤트 발행 및 `settlement-service` 추가
-- MySQL 전환 및 Docker Compose로 서비스+DB 통합 실행
-- user-service에 실제 JWT 발급/검증 로직 추가 및 order-service에서 JWT 파싱으로 전환
+- ~~결제 완료 이벤트 발행 및 settlement-service 추가~~ (위에서 구현)
+- ~~MySQL 전환 및 Docker Compose로 서비스+DB 통합 실행~~ (MySQL 8 + 5 DB, 환경변수로 연결)
+- ~~user-service에 실제 JWT 발급/검증 로직 추가 및 order-service에서 JWT 파싱으로 전환~~ (JJWT HS256, app.jwt.secret 공유)
+- ~~user-service 비밀번호 BCrypt 해싱~~ (회원가입 시 encode, 로그인 시 matches)
+- ~~3단계: API Gateway~~ (Spring Cloud Gateway 8080, 라우팅·JWT 검증·X-User-Id 전달)
+- ~~이벤트 드리븐 (RabbitMQ)~~ (결제 완료: payment-service → RabbitMQ topic `payment.events` → settlement-service 구독)

@@ -13,8 +13,9 @@
 ## 기술 스택
 
 - Java 21, Spring Boot 3.5, Spring Data JPA
-- H2 (로컬). Docker Compose로 4서비스 통합 실행 가능(포트 8081~8084).
-- user-service: Spring Security, JWT(더미 토큰)  
+- 로컬: H2. **Docker Compose**: API Gateway(8080) + MySQL 8 + RabbitMQ + 5서비스(8081~8085, 3306, 5672).
+- **api-gateway**: Spring Cloud Gateway, JWT 검증·X-User-Id 전달.
+- user-service: Spring Security, JWT(HS256, JJWT)  
   order-service: Resilience4j (Retry, CircuitBreaker), Outbox 보상 스케줄러
 
 ## 빌드 및 실행
@@ -33,11 +34,11 @@
 ./scripts/e2e-flow.sh
 ```
 
-**Docker Compose** (로컬 서버 없이 4서비스 한 번에):
+**Docker Compose** (Gateway + MySQL + 5서비스):
 
 ```bash
 docker-compose up --build -d
-./scripts/e2e-flow.sh
+GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 ```
 
 - **Gradle Wrapper**: `gradle-wrapper.jar` 없으면 `gradle wrapper` 한 번 실행.
@@ -45,15 +46,17 @@ docker-compose up --build -d
 
 ## 문서
 
-| 문서 | 설명 |
-|------|------|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
-| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) | 구현 현황·API·E2E·최근 완료 작업 |
-| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md) | 로컬 실행 가이드·E2E 시나리오 |
+| 문서                                               | 설명                                       |
+| -------------------------------------------------- | ------------------------------------------ |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)     | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
+| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) | 구현 현황·API·E2E·최근 완료 작업           |
+| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)           | 로컬 실행 가이드·E2E 시나리오              |
 
 ## 모듈
 
+- **api-gateway** (8080): 클라이언트 단일 진입점, 라우팅·JWT 검증·X-User-Id 전달.
 - **user-service** (8081): 회원가입, 로그인(더미 토큰), GET /users/me, 409 중복 이메일
 - **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, `POST /internal/stocks/release`(보상), 테스트 상품 시딩
 - **order-service** (8083): 주문 생성·조회, product/payment 연동, SAGA 보상(결제 실패 시 재고 복구), Outbox(결제 성공 후 주문 저장 실패 시 결제 취소·재고 복구)
-- **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용)
+- **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용). 결제 완료 시 RabbitMQ로 이벤트 발행
+- **settlement-service** (8085): RabbitMQ에서 결제 완료 이벤트 구독, 일별 매출 집계(`GET /settlements/daily`)

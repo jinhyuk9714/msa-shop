@@ -4,17 +4,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Spring Security 설정 (user-service).
  * - permitAll: 인증 없이 접근 허용 (회원가입, 로그인, /users/me, actuator, H2 콘솔).
- * - anyRequest().authenticated(): 그 외 API는 인증 필요 (현재 더미 토큰이라 별도 필터 없음).
- * - CSRF disable: REST API에서는 보통 비활성화. 쿠키 기반 폼 로그인 시에는 활성화.
- * - frameOptions disable: H2 콘솔이 iframe 사용하기 때문.
+ * - anyRequest().authenticated(): 그 외 API는 인증 필요 (JWT 검증은 컨트롤러에서 수행).
+ * - PasswordEncoder: BCrypt로 비밀번호 해싱/검증.
  */
 @Configuration
 public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

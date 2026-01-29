@@ -17,3 +17,9 @@ spring:
 
 server:
   port: 8081
+
+# JWT (HS256). secret은 32자 이상 권장. order-service와 동일 값 사용.
+app:
+  jwt:
+    secret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    expiration-ms: 3600000

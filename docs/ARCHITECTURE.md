@@ -132,8 +132,8 @@ msa-shop/
   - Spring Web, Spring Data JPA, Spring Boot Actuator
   - Resilience4j (CircuitBreaker, Retry)
 - **인프라**
-  - MySQL (또는 초기에는 H2 → MySQL 전환)
-  - Docker Compose 로 각 서비스 + DB 기동
+  - 로컬 단독 실행: H2 메모리 DB. Docker Compose 실행 시: **MySQL 8** (서비스별 DB: userdb, productdb, orderdb, paymentdb, settlementdb).
+  - Docker Compose 로 MySQL + 각 서비스 기동.
 - **인증**
   - user-service 에서 JWT 발급
   - order-service 에서는 JWT 파싱/검증만 수행  

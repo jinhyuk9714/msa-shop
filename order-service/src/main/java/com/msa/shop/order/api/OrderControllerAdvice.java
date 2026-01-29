@@ -4,10 +4,14 @@ import com.msa.shop.order.application.InsufficientStockException;
 import com.msa.shop.order.application.InvalidTokenException;
 import com.msa.shop.order.application.OrderNotFoundException;
 import com.msa.shop.order.application.PaymentFailedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Map;
 
@@ -49,5 +53,18 @@ public class OrderControllerAdvice {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "UNAUTHORIZED", "message", ex.getMessage()));
+    }
+
+    /** payment/product 서비스 연결 실패 또는 5xx → 502 BAD_GATEWAY (원인 로그) */
+    @ExceptionHandler({ ResourceAccessException.class, RestClientResponseException.class })
+    public ResponseEntity<Map<String, String>> handleRestClientException(Exception ex) {
+        Logger log = LoggerFactory.getLogger(OrderControllerAdvice.class);
+        log.warn("주문 처리 중 내부 서비스 호출 실패", ex);
+        String message = ex instanceof RestClientResponseException re
+                ? "결제 서비스 오류: " + re.getStatusCode()
+                : "결제 서비스 연결 실패. payment-service·RabbitMQ 기동 여부 확인.";
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", message));
     }
 }
