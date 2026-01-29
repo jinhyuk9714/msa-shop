@@ -67,4 +67,9 @@ public class Payment {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    /** 결제 취소(보상) 시 상태를 CANCELED로 변경. */
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+    }
 }

@@ -31,4 +31,18 @@ public class PaymentService {
         Payment payment = new Payment(userId, amount, paymentMethod, PaymentStatus.APPROVED);
         return paymentRepository.save(payment);
     }
+
+    /**
+     * 결제 취소. order-service에서 "결제 성공 후 주문 저장 실패" 시 보상으로 호출.
+     * - APPROVED인 결제만 CANCELED로 변경. 이미 취소된 경우 무시.
+     */
+    @Transactional
+    public void cancel(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다. id=" + paymentId));
+        if (payment.getStatus() == PaymentStatus.APPROVED) {
+            payment.cancel();
+            paymentRepository.save(payment);
+        }
+    }
 }

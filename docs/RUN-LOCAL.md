@@ -87,7 +87,15 @@ Docker·Docker Compose가 설치돼 있다면, 한 번에 네 서비스를 띄�
 docker-compose up --build -d
 ```
 
-기동 후 `./scripts/e2e-flow.sh` 로 E2E 검증. order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너에 연결한다.
+**호스트 포트**: 8081(user), 8082(product), 8083(order), 8084(payment). 로컬 서버를 끄고 Docker만 사용할 때 80번대 포트 사용.
+
+기동 후 E2E:
+
+```bash
+./scripts/e2e-flow.sh
+```
+
+order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너에 연결한다.
 
 종료:
 

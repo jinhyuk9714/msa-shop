@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -43,12 +44,15 @@ class OrderServiceTest {
     @Mock
     OrderRepository orderRepository;
 
+    @Mock
+    OutboxService outboxService;
+
     OrderService orderService;
 
     @BeforeEach
     void setUp() {
         server = MockRestServiceServer.bindTo(restTemplate).build();
-        orderService = new OrderService(orderRepository, restTemplate, PRODUCT_BASE, PAYMENT_BASE);
+        orderService = new OrderService(orderRepository, restTemplate, outboxService, PRODUCT_BASE, PAYMENT_BASE);
     }
 
     @Nested
@@ -121,7 +125,7 @@ class OrderServiceTest {
                 String productBase = productServer.url("/").toString().replaceAll("/$", "");
                 String paymentBase = paymentServer.url("/").toString().replaceAll("/$", "");
                 RestTemplate rt = new RestTemplate();
-                OrderService svc = new OrderService(orderRepository, rt, productBase, paymentBase);
+                OrderService svc = new OrderService(orderRepository, rt, outboxService, productBase, paymentBase);
 
                 assertThatThrownBy(() -> svc.createOrder(1L, 1L, 2, "CARD"))
                         .isInstanceOf(PaymentFailedException.class)
@@ -130,6 +134,35 @@ class OrderServiceTest {
                 productServer.shutdown();
                 paymentServer.shutdown();
             }
+        }
+
+        @Test
+        @DisplayName("결제 성공 후 주문 저장 실패 시 Outbox에 보상 이벤트 발행")
+        void orderSaveFailsThenOutboxPublished() {
+            server.expect(requestTo(PRODUCT_BASE + "/products/1"))
+                    .andExpect(method(HttpMethod.GET))
+                    .andRespond(withSuccess(
+                            "{\"id\":1,\"name\":\"A\",\"price\":10000,\"stockQuantity\":10}",
+                            MediaType.APPLICATION_JSON));
+            server.expect(requestTo(PRODUCT_BASE + "/internal/stocks/reserve"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andRespond(withSuccess(
+                            "{\"success\":true,\"reason\":\"성공\",\"remainingStock\":8}",
+                            MediaType.APPLICATION_JSON));
+            server.expect(requestTo(PAYMENT_BASE + "/payments"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andRespond(withSuccess(
+                            "{\"success\":true,\"paymentId\":99,\"reason\":\"APPROVED\"}",
+                            MediaType.APPLICATION_JSON));
+
+            when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("DB 저장 실패"));
+
+            assertThatThrownBy(() -> orderService.createOrder(1L, 1L, 2, "CARD"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("DB 저장 실패");
+
+            verify(outboxService).publishOrderSaveFailed(99L, 1L, 1L, 2);
+            server.verify();
         }
 
         private Dispatcher productDispatcher() {

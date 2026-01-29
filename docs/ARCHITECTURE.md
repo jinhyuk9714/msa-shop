@@ -98,10 +98,8 @@ msa-shop/
 
 5. **실패 케이스**
    - 2번(재고 부족) 실패 → 주문 실패 응답 (`409 CONFLICT` 등)
-   - 3번(결제 실패) 실패 → 주문 실패 응답 (`402 PAYMENT_REQUIRED` 등)
-   - 2는 성공, 3은 실패 같은 비정상 케이스는 2단계에서 SAGA/보상 트랜잭션으로 확장:
-     - 예: product-service 에 Outbox 테이블 + “재고 예약 이벤트” 발행
-     - order-service 가 이벤트를 소비하며 주문 상태/보상 처리
+   - 3번(결제 실패) 실패 → 재고 복구 후 주문 실패 응답 (`402 PAYMENT_REQUIRED` 등)
+   - **4번(주문 저장) 실패**(결제는 성공): order-service Outbox에 보상 이벤트 기록 → 스케줄러가 결제 취소·재고 복구 수행 (2단계 구현 완료. 상세 `docs/IMPLEMENTATION.md`)
 
 ---
 
@@ -118,9 +116,8 @@ msa-shop/
 
 ### 4.2 2단계 – 깊이 파기
 
-- **트랜잭션 일관성 이슈 다루기**
-  - 예: 결제는 성공했는데 order DB 저장이 실패한 케이스
-  - Outbox 테이블 + 이벤트 소비 기반 보상 처리 실험
+- **트랜잭션 일관성 이슈 다루기** ✓ 구현됨
+  - 결제 성공 후 order DB 저장 실패 시: order-service Outbox 테이블에 보상 이벤트 기록 → `OutboxProcessor` 스케줄러가 결제 취소·재고 복구 호출. 상세는 `docs/IMPLEMENTATION.md` §2단계 Outbox.
 - **settlement-service 추가**
   - payment-service 에서 “결제 완료 이벤트” 발행
   - settlement-service 가 이벤트를 소비하여 판매자/카테고리별 매출 집계

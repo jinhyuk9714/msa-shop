@@ -24,6 +24,11 @@ product-service:
 payment-service:
   base-url: http://localhost:8084
 
+# Outbox: 보상 이벤트 처리 주기(ms). 결제 성공 후 주문 저장 실패 시 스케줄러가 결제 취소·재고 복구 수행
+app:
+  outbox:
+    process-interval: 5000
+
 # Resilience4j: product/payment HTTP 호출 실패 시 Retry, 연속 실패 시 CircuitBreaker
 # retry: maxAttempts번 재시도, waitDuration 간격
 # circuitbreaker: slidingWindowSize개 호출 중 failureRateThreshold% 실패 시 회로 열림, waitDurationInOpenState 후 half-open

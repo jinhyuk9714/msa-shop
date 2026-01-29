@@ -3,6 +3,7 @@ package com.msa.shop.payment.api;
 import com.msa.shop.payment.application.PaymentService;
 import com.msa.shop.payment.domain.Payment;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,6 +46,20 @@ public class PaymentController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(new PaymentResponse(false, null, e.getMessage()));
+        }
+    }
+
+    /**
+     * 결제 취소. order-service 보상 트랜잭션(주문 저장 실패 시)에서 호출.
+     * - 200: 취소 완료. 404: 해당 결제 없음.
+     */
+    @PostMapping("/payments/{id}/cancel")
+    public ResponseEntity<Void> cancel(@PathVariable("id") Long id) {
+        try {
+            paymentService.cancel(id);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }

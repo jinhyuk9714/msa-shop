@@ -6,8 +6,6 @@ import com.msa.shop.order.domain.OrderStatus;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +24,20 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final RestTemplate restTemplate;
+    private final OutboxService outboxService;
     private final String productServiceBaseUrl;
     private final String paymentServiceBaseUrl;
 
     public OrderService(
             OrderRepository orderRepository,
             RestTemplate restTemplate,
+            OutboxService outboxService,
             @Value("${product-service.base-url}") String productServiceBaseUrl,
             @Value("${payment-service.base-url}") String paymentServiceBaseUrl
     ) {
         this.orderRepository = orderRepository;
         this.restTemplate = restTemplate;
+        this.outboxService = outboxService;
         this.productServiceBaseUrl = productServiceBaseUrl;
         this.paymentServiceBaseUrl = paymentServiceBaseUrl;
     }
@@ -61,21 +62,29 @@ public class OrderService {
         }
 
         // 2) 결제 요청 + 실패 시 보상(SAGA 보상 트랜잭션: 재고 복구)
+        Long paymentId = null;
         try {
             PaymentResponse paymentResponse = requestPayment(userId, totalAmount, paymentMethod);
             if (!paymentResponse.success()) {
-                // 결제 실패 → 재고 복구 시도 후 예외
                 safelyReleaseStock(userId, productId, quantity);
                 throw new PaymentFailedException("결제 실패: " + paymentResponse.reason());
             }
+            paymentId = paymentResponse.paymentId();
         } catch (RuntimeException ex) {
-            // 네트워크 오류 등 requestPayment() 내부 예외도 재고 복구 대상
             safelyReleaseStock(userId, productId, quantity);
             throw ex;
         }
 
+        // 3) 주문 저장. 실패 시 Outbox에 보상 이벤트 기록 → 스케줄러가 결제 취소·재고 복구 수행
         Order order = new Order(userId, productId, quantity, totalAmount, OrderStatus.PAID);
-        return orderRepository.save(order);
+        try {
+            return orderRepository.save(order);
+        } catch (Exception ex) {
+            if (paymentId != null) {
+                outboxService.publishOrderSaveFailed(paymentId, userId, productId, quantity);
+            }
+            throw ex;
+        }
     }
 
     @Transactional(readOnly = true)

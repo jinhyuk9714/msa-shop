@@ -1,17 +1,10 @@
 ## 구현 현황 요약
 
-### 최근 완료 작업 (1번 E2E 기준)
+### 최근 완료 작업
 
-- Gradle 멀티 모듈: 루트 `build.gradle` Groovy 문법 정리 (`apply plugin`, `withType(Test)`), 서브모듈 동일 적용.
-- Gradle Wrapper: `gradlew` + `gradle/wrapper`(properties, JAR). `java -cp … GradleWrapperMain` 실행.
-- user-service: `DuplicateEmailException` + `UserControllerAdvice` → 중복 이메일 **409 CONFLICT** + JSON.
-- product-service: `Product.decreaseStock`, `ProductDataLoader` 시딩, `InternalStockController` 재고 차감 정리.
-- payment-service: `application.yml` (8084, H2).
-- order-service: Resilience4j 2.3.0 명시, Retry/CircuitBreaker 설정.
-- E2E: `scripts/e2e-flow.sh` (macOS `sed '$d'`, 409 시 회원가입 스킵 후 로그인 진행).
-- 문서: `docs/RUN-LOCAL.md` 로컬 실행 가이드, `docs/IMPLEMENTATION.md` 본 문서.
-- **테스트**: 필수 단위 테스트 추가. `./gradlew test` 로 실행.
-- **1단계 마무리**: order-service 예외/상태코드(409 재고, 402 결제, 404 주문, 401 토큰), Resilience4j 설정, GET /users/me, GET /orders/me.
+- **1단계**: Gradle 멀티 모듈, Wrapper, user/product/order/payment 4서비스, E2E `scripts/e2e-flow.sh`, 필수 단위 테스트. order-service 예외/상태코드(409·402·404·401), Resilience4j, GET /users/me, GET /orders/me. SAGA 보상(결제 실패 시 재고 복구), product `POST /internal/stocks/release`. order-service 테스트: paymentFails MockWebServer 전환, mockwebserver 의존성.
+- **Docker Compose**: Dockerfile 4개(멀티 모듈 루트 빌드), docker-compose.yml(8081~8084), order-service 환경변수로 product/payment 호스트명 연결. E2E: `./scripts/e2e-flow.sh`. 상세 `docs/RUN-LOCAL.md` §6.
+- **2단계(Outbox·보상)**: payment-service `POST /payments/{id}/cancel` 추가. order-service Outbox 테이블(`outbox_events`), 결제 성공 후 주문 저장 실패 시 `OutboxService.publishOrderSaveFailed` → `OutboxProcessor` 스케줄러(5s)가 결제 취소·재고 복구 수행. 테스트: `orderSaveFailsThenOutboxPublished` 추가.
 
 ---
 
@@ -127,7 +120,7 @@
 - `Payment`
   - `id`, `userId`, `amount`, `paymentMethod`, `status`, `createdAt`
 - `PaymentStatus`
-  - `APPROVED`, `CANCELED` (현재는 APPROVED만 사용)
+  - `APPROVED`, `CANCELED` (보상·취소 시 사용)
 
 ### API
 
@@ -139,6 +132,10 @@
   - Response:
     - 성공: `{ "success": true, "paymentId": <id>, "reason": "APPROVED" }`
     - 실패: `{ "success": false, "paymentId": null, "reason": "<에러 메시지>" }`
+
+- `POST /payments/{id}/cancel`
+  - 결제 취소(보상용). order-service Outbox 스케줄러 또는 동기 보상에서 호출.
+  - APPROVED인 결제만 CANCELED로 변경. 200 OK. 해당 결제 없으면 404.
 
 ---
 
@@ -261,9 +258,20 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ---
 
+## 2단계: Outbox + 보상 (결제 성공 후 주문 저장 실패)
+
+- **payment-service**: `POST /payments/{id}/cancel` — 결제 취소(보상용). order-service 또는 Outbox 스케줄러가 호출.
+- **order-service**:
+  - **Outbox 테이블** (`outbox_events`): 이벤트 타입·payload(JSON)·상태(PENDING/PROCESSED/FAILED). 주문 저장 실패 시 `REQUIRES_NEW` TX로 보상 이벤트만 기록.
+  - **createOrder**: 결제 성공 후 `orderRepository.save()` 실패 시 `OutboxService.publishOrderSaveFailed(paymentId, userId, productId, quantity)` 호출 → 스케줄러가 처리.
+  - **OutboxProcessor** (`@Scheduled(fixedDelay = 5s)`): PENDING 이벤트 조회 → `ORDER_SAVE_FAILED`면 결제 취소 + 재고 복구 호출 → PROCESSED 처리.
+- **설정**: `app.outbox.process-interval` (기본 5000ms). `@EnableScheduling` 적용.
+
+---
+
 ## 앞으로의 확장 아이디어 (2단계용 메모)
 
-- Outbox 패턴 도입 및 주문/결제 보상 트랜잭션 구현
+- ~~Outbox 패턴 도입 및 주문/결제 보상 트랜잭션 구현~~ (위에서 구현)
 - 결제 완료 이벤트 발행 및 `settlement-service` 추가
 - MySQL 전환 및 Docker Compose로 서비스+DB 통합 실행
 - user-service에 실제 JWT 발급/검증 로직 추가 및 order-service에서 JWT 파싱으로 전환

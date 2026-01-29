@@ -13,9 +13,9 @@
 ## 기술 스택
 
 - Java 21, Spring Boot 3.5, Spring Data JPA
-- H2 (로컬), 추후 MySQL·Docker Compose 예정
+- H2 (로컬). Docker Compose로 4서비스 통합 실행 가능(포트 8081~8084).
 - user-service: Spring Security, JWT(더미 토큰)  
-  order-service: Resilience4j (Retry, CircuitBreaker)
+  order-service: Resilience4j (Retry, CircuitBreaker), Outbox 보상 스케줄러
 
 ## 빌드 및 실행
 
@@ -33,6 +33,13 @@
 ./scripts/e2e-flow.sh
 ```
 
+**Docker Compose** (로컬 서버 없이 4서비스 한 번에):
+
+```bash
+docker-compose up --build -d
+./scripts/e2e-flow.sh
+```
+
 - **Gradle Wrapper**: `gradle-wrapper.jar` 없으면 `gradle wrapper` 한 번 실행.
 - 상세 절차·트러블슈팅: [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)
 
@@ -46,7 +53,7 @@
 
 ## 모듈
 
-- **user-service** (8081): 회원가입, 로그인(더미 토큰), 409 중복 이메일
-- **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, 테스트 상품 시딩
-- **order-service** (8083): 주문 생성·조회, product/payment 연동
-- **payment-service** (8084): 가짜 PG 결제 승인
+- **user-service** (8081): 회원가입, 로그인(더미 토큰), GET /users/me, 409 중복 이메일
+- **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, `POST /internal/stocks/release`(보상), 테스트 상품 시딩
+- **order-service** (8083): 주문 생성·조회, product/payment 연동, SAGA 보상(결제 실패 시 재고 복구), Outbox(결제 성공 후 주문 저장 실패 시 결제 취소·재고 복구)
+- **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용)
