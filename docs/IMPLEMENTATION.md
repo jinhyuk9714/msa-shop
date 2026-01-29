@@ -11,6 +11,7 @@
 - E2E: `scripts/e2e-flow.sh` (macOS `sed '$d'`, 409 시 회원가입 스킵 후 로그인 진행).
 - 문서: `docs/RUN-LOCAL.md` 로컬 실행 가이드, `docs/IMPLEMENTATION.md` 본 문서.
 - **테스트**: 필수 단위 테스트 추가. `./gradlew test` 로 실행.
+- **1단계 마무리**: order-service 예외/상태코드(409 재고, 402 결제, 404 주문, 401 토큰), Resilience4j 설정, GET /users/me, GET /orders/me.
 
 ---
 
@@ -63,6 +64,10 @@
   - 로그인(간단한 검증 후 더미 액세스 토큰 발급)
   - Request: `{ "email", "password" }`
   - Response: `{ "accessToken": "dummy-token-for-user-{id}" }`
+
+- `GET /users/me`
+  - 내 정보 조회. `Authorization: Bearer dummy-token-for-user-{id}` 필수.
+  - Response: `{ "id", "email", "name" }`. 토큰 오류 시 401, 사용자 없음 시 404.
 
 ### 보안 설정
 
@@ -183,7 +188,12 @@
     - 현재는 `IllegalStateException` 시 `409 CONFLICT` 수준으로 메시지 반환
 
 - `GET /orders/{id}`
-  - 주문 단건 조회
+  - 주문 단건 조회. 없으면 404.
+
+- `GET /orders/me`
+  - 내 주문 목록. `Authorization: Bearer dummy-token-for-user-{id}` 필수. `createdAt` 내림차순.
+
+order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 402, 주문 없음 → 404, 토큰 오류 → 401.
 
 ---
 
@@ -220,7 +230,7 @@
 
 ## 기타 정리
 
-- **order-service**: Resilience4j `resilience4j-spring-boot3:2.3.0` 명시, `productService`/`paymentService` Retry·CircuitBreaker 설정.
+- **order-service**: Resilience4j `resilience4j-spring-boot3:2.3.0` 명시, `productService`/`paymentService` Retry(waitDuration 200ms)·CircuitBreaker(failureRateThreshold 50, waitDurationInOpenState 5s) 설정.
 - **payment-service**: `application.yml` (포트 8084, H2).
 
 ---

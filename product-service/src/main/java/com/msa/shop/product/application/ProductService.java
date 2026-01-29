@@ -7,6 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * 상품 도메인 비즈니스 로직.
+ * - 목록/상세 조회. 재고 예약은 InternalStockController에서 직접 Repository 사용.
+ */
 @Service
 public class ProductService {
 
@@ -27,4 +31,3 @@ public class ProductService {
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));
     }
 }
-

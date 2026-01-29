@@ -3,6 +3,10 @@ package com.msa.shop.order.application;
 import com.msa.shop.order.domain.Order;
 import com.msa.shop.order.domain.OrderRepository;
 import com.msa.shop.order.domain.OrderStatus;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -95,34 +101,74 @@ class OrderServiceTest {
                             MediaType.APPLICATION_JSON));
 
             assertThatThrownBy(() -> orderService.createOrder(1L, 1L, 100, "CARD"))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(InsufficientStockException.class)
                     .hasMessageContaining("재고 부족");
             server.verify();
         }
 
         @Test
-        @DisplayName("결제 실패 시 IllegalStateException")
-        void paymentFails() {
-            server.expect(requestTo(PRODUCT_BASE + "/products/1"))
-                    .andExpect(method(HttpMethod.GET))
-                    .andRespond(withSuccess(
-                            "{\"id\":1,\"name\":\"A\",\"price\":10000,\"stockQuantity\":10}",
-                            MediaType.APPLICATION_JSON));
-            server.expect(requestTo(PRODUCT_BASE + "/internal/stocks/reserve"))
-                    .andExpect(method(HttpMethod.POST))
-                    .andRespond(withSuccess(
-                            "{\"success\":true,\"reason\":\"성공\",\"remainingStock\":8}",
-                            MediaType.APPLICATION_JSON));
-            server.expect(requestTo(PAYMENT_BASE + "/payments"))
-                    .andExpect(method(HttpMethod.POST))
-                    .andRespond(withSuccess(
-                            "{\"success\":false,\"paymentId\":null,\"reason\":\"결제 실패\"}",
-                            MediaType.APPLICATION_JSON));
+        @DisplayName("결제 실패 시 PaymentFailedException 및 재고 복구 호출")
+        void paymentFails() throws IOException {
+            // MockRestServiceServer 대신 MockWebServer 사용: 경로별 스텁, 순서/매칭 이슈 제거
+            MockWebServer productServer = new MockWebServer();
+            MockWebServer paymentServer = new MockWebServer();
+            try {
+                productServer.setDispatcher(productDispatcher());
+                paymentServer.setDispatcher(paymentDispatcher());
+                productServer.start();
+                paymentServer.start();
 
-            assertThatThrownBy(() -> orderService.createOrder(1L, 1L, 2, "CARD"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("결제 실패");
-            server.verify();
+                String productBase = productServer.url("/").toString().replaceAll("/$", "");
+                String paymentBase = paymentServer.url("/").toString().replaceAll("/$", "");
+                RestTemplate rt = new RestTemplate();
+                OrderService svc = new OrderService(orderRepository, rt, productBase, paymentBase);
+
+                assertThatThrownBy(() -> svc.createOrder(1L, 1L, 2, "CARD"))
+                        .isInstanceOf(PaymentFailedException.class)
+                        .hasMessageContaining("결제 실패");
+            } finally {
+                productServer.shutdown();
+                paymentServer.shutdown();
+            }
+        }
+
+        private Dispatcher productDispatcher() {
+            return new Dispatcher() {
+                @Override
+                public MockResponse dispatch(RecordedRequest request) {
+                    String path = request.getPath();
+                    if ("GET".equals(request.getMethod()) && path != null && path.startsWith("/products/")) {
+                        return json(200, "{\"id\":1,\"name\":\"A\",\"price\":10000,\"stockQuantity\":10}");
+                    }
+                    if ("POST".equals(request.getMethod()) && path != null && path.contains("/internal/stocks/reserve")) {
+                        return json(200, "{\"success\":true,\"reason\":\"성공\",\"remainingStock\":8}");
+                    }
+                    if ("POST".equals(request.getMethod()) && path != null && path.contains("/internal/stocks/release")) {
+                        return json(200, "{}");
+                    }
+                    return new MockResponse().setResponseCode(404);
+                }
+            };
+        }
+
+        private Dispatcher paymentDispatcher() {
+            return new Dispatcher() {
+                @Override
+                public MockResponse dispatch(RecordedRequest request) {
+                    String path = request.getPath();
+                    if ("POST".equals(request.getMethod()) && path != null && path.startsWith("/payments")) {
+                        return json(200, "{\"success\":false,\"paymentId\":null,\"reason\":\"결제 실패\"}");
+                    }
+                    return new MockResponse().setResponseCode(404);
+                }
+            };
+        }
+
+        private static MockResponse json(int code, String body) {
+            return new MockResponse()
+                    .setResponseCode(code)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody(body);
         }
     }
 
@@ -144,13 +190,31 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("없으면 IllegalArgumentException")
+        @DisplayName("없으면 OrderNotFoundException")
         void notFound() {
             when(orderRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.getOrder(999L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(OrderNotFoundException.class)
                     .hasMessageContaining("주문을 찾을 수 없습니다");
+        }
+    }
+
+    @Nested
+    @DisplayName("getOrdersByUser")
+    class GetOrdersByUser {
+
+        @Test
+        @DisplayName("userId 기준 목록 반환")
+        void success() {
+            Order o1 = new Order(1L, 1L, 2, 20_000, OrderStatus.PAID);
+            when(orderRepository.findByUserIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(o1));
+
+            var result = orderService.getOrdersByUser(1L);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getUserId()).isEqualTo(1L);
+            assertThat(result.get(0).getProductId()).isEqualTo(1L);
         }
     }
 }

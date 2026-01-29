@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# E2E 시나리오: 상품 목록 → 회원가입 → 로그인 → 주문 생성 → 주문 조회.
+# 네 서비스(user/product/order/payment) 기동 후 실행. ./scripts/e2e-flow.sh
 set -e
 
 USER_URL="${USER_URL:-http://localhost:8081}"

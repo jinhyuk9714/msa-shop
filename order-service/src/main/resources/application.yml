@@ -24,16 +24,25 @@ product-service:
 payment-service:
   base-url: http://localhost:8084
 
+# Resilience4j: product/payment HTTP 호출 실패 시 Retry, 연속 실패 시 CircuitBreaker
+# retry: maxAttempts번 재시도, waitDuration 간격
+# circuitbreaker: slidingWindowSize개 호출 중 failureRateThreshold% 실패 시 회로 열림, waitDurationInOpenState 후 half-open
 resilience4j:
   retry:
     instances:
       productService:
         maxAttempts: 3
+        waitDuration: 200ms
       paymentService:
         maxAttempts: 3
+        waitDuration: 200ms
   circuitbreaker:
     instances:
       productService:
         slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
       paymentService:
         slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s

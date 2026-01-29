@@ -4,6 +4,12 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 주문 엔티티. order-service DB(orders 테이블)와 1:1 매핑.
+ * - userId: user-service 사용자 ID (다른 서비스 참조는 ID만 보관, DB FK 없음).
+ * - productId: product-service 상품 ID.
+ * - totalAmount: 주문 금액 (가격 × 수량). 결제 요청 시 payment-service에 전달.
+ */
 @Entity
 @Table(name = "orders")
 public class Order {
@@ -71,4 +77,3 @@ public class Order {
         return createdAt;
     }
 }
-

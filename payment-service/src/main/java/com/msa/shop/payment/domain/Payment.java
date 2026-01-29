@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 결제 엔티티. payment-service DB(payments 테이블)와 1:1 매핑.
+ * - userId: 주문자(user-service ID). order-service에서 전달.
+ * - amount: 결제 금액. order-service가 가격×수량으로 계산 후 전달.
+ */
 @Entity
 @Table(name = "payments")
 public class Payment {
@@ -63,4 +68,3 @@ public class Payment {
         return createdAt;
     }
 }
-

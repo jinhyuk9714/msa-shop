@@ -94,4 +94,31 @@ class UserServiceTest {
                     .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
     }
+
+    @Nested
+    @DisplayName("getUser")
+    class GetUser {
+
+        @Test
+        @DisplayName("존재하면 반환")
+        void success() {
+            User user = new User("a@test.com", "pw", "이름");
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+            User result = userService.getUser(1L);
+
+            assertThat(result.getEmail()).isEqualTo("a@test.com");
+            assertThat(result.getName()).isEqualTo("이름");
+        }
+
+        @Test
+        @DisplayName("없으면 UserNotFoundException")
+        void notFound() {
+            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userService.getUser(999L))
+                    .isInstanceOf(UserNotFoundException.class)
+                    .hasMessageContaining("사용자를 찾을 수 없습니다");
+        }
+    }
 }

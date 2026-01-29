@@ -2,6 +2,10 @@ package com.msa.shop.user.domain;
 
 import jakarta.persistence.*;
 
+/**
+ * 회원 엔티티. user-service DB(users 테이블)와 1:1 매핑.
+ * - JPA: Java 객체 ↔ DB 테이블 매핑. 저장/조회 시 자동 변환.
+ */
 @Entity
 @Table(name = "users")
 public class User {
@@ -19,6 +23,7 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    /** JPA용. 실제로 new User(...) 시 사용하지 않음. */
     protected User() {
     }
 
@@ -44,4 +49,3 @@ public class User {
         return name;
     }
 }
-
