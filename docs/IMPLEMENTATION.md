@@ -106,6 +106,11 @@
     - 성공: `{ "success": true, "reason": "성공", "remainingStock": <남은 재고> }`
     - 실패(재고 부족): `{ "success": false, "reason": "재고 부족", "remainingStock": <현재 재고> }`
 
+- `POST /internal/stocks/release`
+  - **SAGA 보상용**: 재고 예약 후 결제 실패/오류 시 재고 복구. order-service 내부 호출.
+  - Request: `{ "userId", "productId", "quantity" }`
+  - Response: 200 + 빈 JSON 등 (성공 여부만 사용).
+
 ### 테스트 데이터
 
 - `ProductDataLoader` (CommandLineRunner): 기동 시 상품 A(1만원/100), B(2.5만원/50), C(5천원/5) 자동 등록.
@@ -171,7 +176,8 @@
 
 4. **결제 요청**
    - `POST payment-service /payments`
-   - 실패(`success=false`) 시 주문 실패로 간주하고 예외 발생
+   - 실패(`success=false`) 시 **보상**: `POST product-service /internal/stocks/release` 호출 후 `PaymentFailedException` (402).
+   - `requestPayment` 내부 예외(네트워크 등) 시에도 동일하게 재고 복구 후 예외 전파.
 
 5. **주문 저장**
    - 모든 단계가 성공하면 `Order(status = PAID)` 엔티티를 저장
@@ -240,9 +246,9 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 - **user-service** `UserServiceTest`: 회원가입 성공/중복 이메일(`DuplicateEmailException`), 로그인 성공/없는 이메일/비밀번호 오류.
 - **product-service** `ProductTest`: `Product.decreaseStock` 성공, 수량 0·음수·재고 초과 시 `IllegalArgumentException`.
 - **payment-service** `PaymentServiceTest`: `approve` 성공, 금액 ≤ 0 시 `IllegalArgumentException`.
-- **order-service** `OrderServiceTest`: `createOrder` 성공(외부 HTTP Mock), 재고 예약 실패·결제 실패 시 `IllegalStateException`, `getOrder` 성공/미존재.
+- **order-service** `OrderServiceTest`: `createOrder` 성공(외부 HTTP Mock), 재고 예약 실패(`InsufficientStockException`), **결제 실패 시 `PaymentFailedException` 및 재고 복구 호출** 검증, `getOrder` 성공/미존재.
 
-실행: `./gradlew test`. order-service 테스트는 `MockRestServiceServer`로 product/payment HTTP 모킹.
+실행: `./gradlew test`. order-service는 `success`/`reserveFails`에 `MockRestServiceServer`, **`paymentFails`에 OkHttp `MockWebServer`** 사용(경로별 Dispatcher로 product/payment/release 스텁, 순서·매칭 이슈 회피). `mockwebserver` 의존성: `order-service/build.gradle` `testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")`.
 
 ---
 
