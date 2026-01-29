@@ -33,24 +33,11 @@ public class InternalStockController {
             );
         }
 
-        Product updated = new Product(
-                product.getName(),
-                product.getPrice(),
-                product.getStockQuantity() - request.quantity()
-        );
-        // id 유지가 필요하므로 엔티티를 다시 설정
-        try {
-            java.lang.reflect.Field idField = Product.class.getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(updated, product.getId());
-        } catch (Exception e) {
-            throw new IllegalStateException("상품 재고 업데이트 중 오류가 발생했습니다.", e);
-        }
-
-        productRepository.save(updated);
+        product.decreaseStock(request.quantity());
+        productRepository.save(product);
 
         return ResponseEntity.ok(
-                new ReserveStockResponse(true, "성공", updated.getStockQuantity())
+                new ReserveStockResponse(true, "성공", product.getStockQuantity())
         );
     }
 }

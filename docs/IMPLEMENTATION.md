@@ -1,5 +1,18 @@
 ## 구현 현황 요약
 
+### 최근 완료 작업 (1번 E2E 기준)
+
+- Gradle 멀티 모듈: 루트 `build.gradle` Groovy 문법 정리 (`apply plugin`, `withType(Test)`), 서브모듈 동일 적용.
+- Gradle Wrapper: `gradlew` + `gradle/wrapper`(properties, JAR). `java -cp … GradleWrapperMain` 실행.
+- user-service: `DuplicateEmailException` + `UserControllerAdvice` → 중복 이메일 **409 CONFLICT** + JSON.
+- product-service: `Product.decreaseStock`, `ProductDataLoader` 시딩, `InternalStockController` 재고 차감 정리.
+- payment-service: `application.yml` (8084, H2).
+- order-service: Resilience4j 2.3.0 명시, Retry/CircuitBreaker 설정.
+- E2E: `scripts/e2e-flow.sh` (macOS `sed '$d'`, 409 시 회원가입 스킵 후 로그인 진행).
+- 문서: `docs/RUN-LOCAL.md` 로컬 실행 가이드, `docs/IMPLEMENTATION.md` 본 문서.
+
+---
+
 ### 공통
 
 - **언어/런타임**
@@ -42,7 +55,8 @@
   - 회원가입
   - Request: `{ "email", "password", "name" }`
   - Response: `{ "id", "email", "name" }`
-  - 이미 존재하는 이메일이면 400 수준의 예외 발생(현재는 `IllegalArgumentException` 기반)
+  - 이미 존재하는 이메일: **409 CONFLICT** + JSON `{ "error": "CONFLICT", "message": "이미 존재하는 이메일입니다." }`  
+    (`DuplicateEmailException` → `UserControllerAdvice`)
 
 - `POST /auth/login`
   - 로그인(간단한 검증 후 더미 액세스 토큰 발급)
@@ -67,6 +81,7 @@
 
 - `Product`
   - `id`, `name`, `price`, `stockQuantity`
+  - `decreaseStock(quantity)` 로 재고 차감 (리플렉션 제거)
 
 ### API
 
@@ -84,6 +99,10 @@
   - Response:
     - 성공: `{ "success": true, "reason": "성공", "remainingStock": <남은 재고> }`
     - 실패(재고 부족): `{ "success": false, "reason": "재고 부족", "remainingStock": <현재 재고> }`
+
+### 테스트 데이터
+
+- `ProductDataLoader` (CommandLineRunner): 기동 시 상품 A(1만원/100), B(2.5만원/50), C(5천원/5) 자동 등록.
 
 ---
 
@@ -167,6 +186,17 @@
 
 ---
 
+## 1번: 로컬 실행 및 E2E 검증
+
+**상세 절차**: `docs/RUN-LOCAL.md` 참고.
+
+- **Gradle**: 루트 `build.gradle`(Groovy), `gradlew` + `gradle/wrapper` 사용. `tasks.withType(Test)` 등 Groovy 문법.
+- **테스트 상품**: `product-service` `ProductDataLoader` 로 상품 A/B/C 자동 등록.
+- **E2E 스크립트**: `./scripts/e2e-flow.sh` — 상품 목록 → 회원가입(409 시 스킵) → 로그인 → 주문 생성 → 주문 조회.  
+  macOS 호환(`sed '$d'` 등), 중복 가입 시 409 처리 후 로그인으로 진행.
+
+---
+
 ## 실행 순서(예시)
 
 1. **user-service 실행 후 회원가입/로그인**
@@ -174,8 +204,8 @@
    - `POST /auth/login` 으로 로그인 후 `accessToken` 획득  
      → 값 예시: `dummy-token-for-user-1`
 
-2. **product-service에서 테스트용 상품 데이터 입력**  
-   - 현재는 직접 DB(H2 콘솔) 또는 추가 API로 데이터 입력 필요
+2. **product-service**
+   - `ProductDataLoader` 로 테스트 상품 자동 등록 (별도 입력 불필요)
 
 3. **order-service로 주문 생성**
    - 헤더: `Authorization: Bearer dummy-token-for-user-1`
@@ -187,10 +217,16 @@
 
 ---
 
+## 기타 정리
+
+- **order-service**: Resilience4j `resilience4j-spring-boot3:2.3.0` 명시, `productService`/`paymentService` Retry·CircuitBreaker 설정.
+- **payment-service**: `application.yml` (포트 8084, H2).
+
+---
+
 ## 앞으로의 확장 아이디어 (2단계용 메모)
 
 - Outbox 패턴 도입 및 주문/결제 보상 트랜잭션 구현
 - 결제 완료 이벤트 발행 및 `settlement-service` 추가
 - MySQL 전환 및 Docker Compose로 서비스+DB 통합 실행
 - user-service에 실제 JWT 발급/검증 로직 추가 및 order-service에서 JWT 파싱으로 전환
-

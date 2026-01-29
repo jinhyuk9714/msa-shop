@@ -1,13 +1,52 @@
-## MSA Shop
+# MSA Shop
 
-간단한 쇼핑몰 도메인을 기반으로 한 **마이크로서비스 아키텍처(MSA) 연습 프로젝트**입니다.  
-회원, 상품, 주문, 결제, 정산까지의 흐름을 여러 개의 서비스로 나누어 구현하는 것을 목표로 합니다.
+쇼핑몰 도메인 기반 **마이크로서비스 아키텍처(MSA)** 연습 프로젝트입니다.  
+회원, 상품, 주문, 결제(정산 예정)를 여러 서비스로 나누어 구현합니다.
 
-### 목표
+## 목표
 
 - User / Product / Order / Payment / Settlement 로 서비스 경계 나누기
 - 서비스 간 통신 (REST + Resilience4j)
-- 주문/결제 흐름에서의 SAGA/보상 트랜잭션 개념 맛보기
-- 결제 완료 이벤트 기반 정산/매출 집계 배치 설계
+- 주문/결제 흐름에서 SAGA·보상 트랜잭션 맛보기
+- 결제 완료 이벤트 기반 정산/매출 집계 배치
 
-자세한 설계와 흐름은 `docs/ARCHITECTURE.md` 를 참고하세요.
+## 기술 스택
+
+- Java 21, Spring Boot 3.5, Spring Data JPA
+- H2 (로컬), 추후 MySQL·Docker Compose 예정
+- user-service: Spring Security, JWT(더미 토큰)  
+  order-service: Resilience4j (Retry, CircuitBreaker)
+
+## 빌드 및 실행
+
+```bash
+./gradlew build -x test
+./gradlew :user-service:bootRun     # 8081
+./gradlew :product-service:bootRun  # 8082
+./gradlew :payment-service:bootRun  # 8084
+./gradlew :order-service:bootRun    # 8083
+```
+
+네 서비스 기동 후 E2E:
+
+```bash
+./scripts/e2e-flow.sh
+```
+
+- **Gradle Wrapper**: `gradle-wrapper.jar` 없으면 `gradle wrapper` 한 번 실행.
+- 상세 절차·트러블슈팅: [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)
+
+## 문서
+
+| 문서 | 설명 |
+|------|------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
+| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) | 구현 현황·API·E2E·최근 완료 작업 |
+| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md) | 로컬 실행 가이드·E2E 시나리오 |
+
+## 모듈
+
+- **user-service** (8081): 회원가입, 로그인(더미 토큰), 409 중복 이메일
+- **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, 테스트 상품 시딩
+- **order-service** (8083): 주문 생성·조회, product/payment 연동
+- **payment-service** (8084): 가짜 PG 결제 승인

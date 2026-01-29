@@ -43,5 +43,13 @@ public class Product {
     public int getStockQuantity() {
         return stockQuantity;
     }
+
+    /** 재고 차감. 호출 전 quantity 검증 필요. */
+    public void decreaseStock(int quantity) {
+        if (quantity <= 0 || stockQuantity < quantity) {
+            throw new IllegalArgumentException("유효하지 않은 재고 차감 요청");
+        }
+        this.stockQuantity -= quantity;
+    }
 }
 

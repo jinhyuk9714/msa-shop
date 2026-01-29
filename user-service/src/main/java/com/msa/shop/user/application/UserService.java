@@ -17,7 +17,7 @@ public class UserService {
     @Transactional
     public User register(String email, String password, String name) {
         userRepository.findByEmail(email).ifPresent(u -> {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+            throw new DuplicateEmailException("이미 존재하는 이메일입니다.");
         });
         // TODO: 이후 비밀번호 해싱 적용
         User user = new User(email, password, name);

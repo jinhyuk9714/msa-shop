@@ -23,3 +23,17 @@ product-service:
 
 payment-service:
   base-url: http://localhost:8084
+
+resilience4j:
+  retry:
+    instances:
+      productService:
+        maxAttempts: 3
+      paymentService:
+        maxAttempts: 3
+  circuitbreaker:
+    instances:
+      productService:
+        slidingWindowSize: 10
+      paymentService:
+        slidingWindowSize: 10
