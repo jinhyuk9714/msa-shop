@@ -10,6 +10,7 @@
 - order-service: Resilience4j 2.3.0 명시, Retry/CircuitBreaker 설정.
 - E2E: `scripts/e2e-flow.sh` (macOS `sed '$d'`, 409 시 회원가입 스킵 후 로그인 진행).
 - 문서: `docs/RUN-LOCAL.md` 로컬 실행 가이드, `docs/IMPLEMENTATION.md` 본 문서.
+- **테스트**: 필수 단위 테스트 추가. `./gradlew test` 로 실행.
 
 ---
 
@@ -221,6 +222,17 @@
 
 - **order-service**: Resilience4j `resilience4j-spring-boot3:2.3.0` 명시, `productService`/`paymentService` Retry·CircuitBreaker 설정.
 - **payment-service**: `application.yml` (포트 8084, H2).
+
+---
+
+## 테스트 (필수 단위 테스트)
+
+- **user-service** `UserServiceTest`: 회원가입 성공/중복 이메일(`DuplicateEmailException`), 로그인 성공/없는 이메일/비밀번호 오류.
+- **product-service** `ProductTest`: `Product.decreaseStock` 성공, 수량 0·음수·재고 초과 시 `IllegalArgumentException`.
+- **payment-service** `PaymentServiceTest`: `approve` 성공, 금액 ≤ 0 시 `IllegalArgumentException`.
+- **order-service** `OrderServiceTest`: `createOrder` 성공(외부 HTTP Mock), 재고 예약 실패·결제 실패 시 `IllegalStateException`, `getOrder` 성공/미존재.
+
+실행: `./gradlew test`. order-service 테스트는 `MockRestServiceServer`로 product/payment HTTP 모킹.
 
 ---
 
