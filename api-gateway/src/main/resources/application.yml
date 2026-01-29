@@ -21,6 +21,22 @@ spring:
   application:
     name: api-gateway
 
+# Actuator + Prometheus + Zipkin 추적
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
 # JWT 검증 (user-service와 동일 secret). 인증 필요 경로에서 X-User-Id 추가.
 app:
   jwt:

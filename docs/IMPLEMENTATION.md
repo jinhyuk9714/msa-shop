@@ -1,11 +1,16 @@
 ## 구현 현황 요약
 
-### 최근 완료 작업
+### 최근 완료 작업 (현재 기준)
 
-- **1단계**: Gradle 멀티 모듈, Wrapper, user/product/order/payment 4서비스, E2E `scripts/e2e-flow.sh`, 필수 단위 테스트. order-service 예외/상태코드(409·402·404·401), Resilience4j, GET /users/me, GET /orders/me. SAGA 보상(결제 실패 시 재고 복구), product `POST /internal/stocks/release`. order-service 테스트: paymentFails MockWebServer 전환, mockwebserver 의존성.
-- **Docker Compose**: Dockerfile 4개(멀티 모듈 루트 빌드), docker-compose.yml(8081~8084), order-service 환경변수로 product/payment 호스트명 연결. E2E: `./scripts/e2e-flow.sh`. 상세 `docs/RUN-LOCAL.md` §6.
-- **2단계(Outbox·보상)**: payment-service `POST /payments/{id}/cancel` 추가. order-service Outbox 테이블(`outbox_events`), 결제 성공 후 주문 저장 실패 시 `OutboxService.publishOrderSaveFailed` → `OutboxProcessor` 스케줄러(5s)가 결제 취소·재고 복구 수행. 테스트: `orderSaveFailsThenOutboxPublished` 추가.
-- **settlement-service**: 결제 완료 이벤트 수신(POST /internal/events/payment-completed), 일별 매출 집계(DailySettlement). payment-service가 결제 승인 후 settlement 호출. Docker Compose에 settlement-service(8085) 추가, payment-service에 SETTLEMENT_SERVICE_BASE_URL 설정.
+- **1단계**: Gradle 멀티 모듈, user/product/order/payment 4서비스, E2E `scripts/e2e-flow.sh`, 단위 테스트. order-service 예외/상태코드(409·402·404·401·502), Resilience4j, GET /users/me, GET /orders/me. SAGA 보상(결제 실패 시 재고 복구), product `POST /internal/stocks/release`.
+- **2단계(Outbox·보상)**: payment-service `POST /payments/{id}/cancel`. order-service Outbox(`outbox_events`) → 결제 성공 후 주문 저장 실패 시 `OutboxProcessor`(5s)가 결제 취소·재고 복구.
+- **settlement-service**: 일별/월별 매출 집계(DailySettlement, MonthlySettlement). **RabbitMQ**로 결제 완료 이벤트 구독(Queue `settlement.payment.completed`). 배치 Job(일별 row 보정, 월별 집계).
+- **MySQL + Docker Compose**: MySQL 8 한 컨테이너에 5개 DB. `docker/mysql/init/01-create-databases.sql`. 서비스별 `SPRING_DATASOURCE_*` 환경변수.
+- **JWT·BCrypt**: user-service JJWT HS256 발급/검증, BCrypt 비밀번호. order-service JwtSupport로 userId 추출. `app.jwt.secret` 공유.
+- **API Gateway(3단계)**: Spring Cloud Gateway 8080. `/users/**`, `/auth/**`, `/products/**`, `/orders/**` 라우팅. `/orders/**`, `/users/me` JWT 검증 후 `X-User-Id` downstream 전달.
+- **이벤트 드리븐(RabbitMQ)**: payment-service 결제 승인 후 Topic `payment.events`(routing key `payment.completed`) 발행. settlement-service `PaymentCompletedListener` 구독. HTTP 정산 호출 제거.
+- **order-service 예외 보강**: payment/product 연결 실패·5xx 시 502 BAD_GATEWAY + 메시지(OrderControllerAdvice).
+- **E2E**: `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` (Gateway 경유), `./scripts/e2e-flow.sh` (직접). GET /orders/{id}에 Authorization 헤더 포함.
 
 ---
 
@@ -25,12 +30,16 @@
 
 ## 모듈 구조
 
-- `user-service`
-- `product-service`
-- `order-service`
-- `payment-service`
+| 모듈                   | 포트 | 비고                                              |
+| ---------------------- | ---- | ------------------------------------------------- |
+| **api-gateway**        | 8080 | Spring Cloud Gateway, JWT 검증, X-User-Id         |
+| **user-service**       | 8081 | 회원·로그인(JWT)·BCrypt                           |
+| **product-service**    | 8082 | 상품·재고 예약/복구                               |
+| **order-service**      | 8083 | 주문 생성/조회, product·payment REST, Outbox 보상 |
+| **payment-service**    | 8084 | 가짜 PG, RabbitMQ 결제 완료 이벤트 발행           |
+| **settlement-service** | 8085 | RabbitMQ 구독, 일별/월별 매출 집계                |
 
-각 서비스는 독립적인 Spring Boot 애플리케이션이며, 루트 Gradle 멀티 모듈로 관리된다.
+각 서비스는 독립 Spring Boot 앱이며, 루트 Gradle 멀티 모듈로 관리. Docker Compose 시 MySQL 8 + RabbitMQ 포함.
 
 ---
 
@@ -198,7 +207,7 @@
 - `GET /orders/me`
   - 내 주문 목록. `Authorization: Bearer <JWT>` 필수. `createdAt` 내림차순.
 
-order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 402, 주문 없음 → 404, 토큰 오류 → 401.
+order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 402, 주문 없음 → 404, 토큰 오류 → 401, **payment/product 연결 실패·5xx** → 502 BAD_GATEWAY. **인증**: Gateway 경유 시 `X-User-Id` 사용, 직접 호출 시 `Authorization: Bearer <JWT>` 파싱(JwtSupport).
 
 ---
 
@@ -208,8 +217,8 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 - **Gradle**: 루트 `build.gradle`(Groovy), `gradlew` + `gradle/wrapper` 사용. `tasks.withType(Test)` 등 Groovy 문법.
 - **테스트 상품**: `product-service` `ProductDataLoader` 로 상품 A/B/C 자동 등록.
-- **E2E 스크립트**: `./scripts/e2e-flow.sh` — 상품 목록 → 회원가입(409 시 스킵) → 로그인 → 주문 생성 → 주문 조회.  
-  macOS 호환(`sed '$d'` 등), 중복 가입 시 409 처리 후 로그인으로 진행.
+- **E2E 스크립트**: `./scripts/e2e-flow.sh` — 상품 목록 → 회원가입(409 시 스킵) → 로그인 → 주문 생성 → 주문 조회 → **당일 매출 집계(settlement)**. `SETTLEMENT_URL`(기본 8085)로 6단계 선택.
+- **E2E 실패 시나리오**: `./scripts/e2e-failure-scenarios.sh` — 로그인 후 재고 부족(상품 3, 수량 10 → 409) 검증.
 
 ---
 
@@ -239,7 +248,9 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ---
 
-## 테스트 (필수 단위 테스트)
+## 테스트
+
+### 단위 테스트 (필수)
 
 - **user-service** `UserServiceTest`: 회원가입 성공/중복 이메일(`DuplicateEmailException`), 로그인 성공/없는 이메일/비밀번호 오류.
 - **product-service** `ProductTest`: `Product.decreaseStock` 성공, 수량 0·음수·재고 초과 시 `IllegalArgumentException`.
@@ -247,6 +258,28 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 - **order-service** `OrderServiceTest`: `createOrder` 성공(외부 HTTP Mock), 재고 예약 실패(`InsufficientStockException`), **결제 실패 시 `PaymentFailedException` 및 재고 복구 호출** 검증, `getOrder` 성공/미존재.
 
 실행: `./gradlew test`. order-service는 `success`/`reserveFails`에 `MockRestServiceServer`, **`paymentFails`에 OkHttp `MockWebServer`** 사용(경로별 Dispatcher로 product/payment/release 스텁, 순서·매칭 이슈 회피). `mockwebserver` 의존성: `order-service/build.gradle` `testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")`.
+
+### 통합 테스트 (order-service)
+
+- **OrderControllerIntegrationTest**: Testcontainers MySQL + MockWebServer(product/payment). `@SpringBootTest(webEnvironment = RANDOM_PORT)`, `@ServiceConnection` MySQL, `@DynamicPropertySource`로 product/payment base-url. POST /orders (X-User-Id) → 201, GET /orders/{id} → 200 검증. 실행 시 Docker 필요.
+
+---
+
+## 관측성 (Observability)
+
+- **Actuator + Prometheus**: 6개 서비스(api-gateway, user, product, order, payment, settlement)에 `spring-boot-starter-actuator`, `micrometer-registry-prometheus` 적용. `/actuator/health`, `/actuator/info`, `/actuator/prometheus` 노출.
+- **Prometheus**: `docker/prometheus/prometheus.yml`로 각 서비스 `:port/actuator/prometheus` 15초 간격 스크래핑. Docker Compose 시 `prometheus:9090` 기동.
+- **Grafana**: Docker Compose 시 `grafana:3000` 기동. Provisioning으로 Prometheus 데이터소스 자동 등록. 로그인 admin/admin.
+- **분산 추적 (Zipkin)**: api-gateway, order-service, product-service, payment-service에 `micrometer-tracing-bridge-brave`, `zipkin-reporter-brave` 적용. `management.tracing.sampling.probability=1.0`, `management.zipkin.tracing.endpoint`(Docker: `http://zipkin:9411/api/v2/spans`). Zipkin UI `http://localhost:9411`에서 주문 플로우 트레이스 조회.
+
+---
+
+## OpenAPI (Swagger)
+
+- **springdoc-openapi-starter-webmvc-ui** 2.5.0 적용: user, product, order, payment, settlement 5개 서비스.
+- **경로**: `/swagger-ui.html` (Swagger UI), `/v3/api-docs` (OpenAPI 3.0 JSON). 각 서비스 포트(8081~8085)에서 접근.
+- **user-service**: SecurityConfig에서 `/swagger-ui/**`, `/v3/api-docs/**` permitAll.
+- **OpenApiConfig**: 서비스별 `OpenAPI` 빈으로 title·description 설정 (User/Product/Order/Payment/Settlement Service API).
 
 ---
 
@@ -261,10 +294,11 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ## Docker Compose
 
-- **docker-compose.yml**: **api-gateway(8080)** + MySQL 8 + user / product / order / payment / settlement. 루트에서 `docker-compose up --build -d` 실행.
-- **api-gateway**: user·product·order 서비스 기동 후 기동. `USER_SERVICE_URI`, `PRODUCT_SERVICE_URI`, `ORDER_SERVICE_URI` 로 라우팅.
-- **MySQL**: 이미지 `mysql:8`, 초기화 스크립트로 5개 DB 생성. MySQL healthcheck 통과 후 서비스 기동.
-- **E2E**: Gateway 경유 `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh`. 직접 호출 `./scripts/e2e-flow.sh`. 상세는 `docs/RUN-LOCAL.md` §6.
+- **docker-compose.yml**: **api-gateway(8080)** + **RabbitMQ**(5672, 15672) + **MySQL 8**(3306) + **Zipkin**(9411) + **Prometheus**(9090) + **Grafana**(3000) + user / product / order / payment / settlement. 루트에서 `docker-compose up --build -d` 실행.
+- **api-gateway**: user·product·order 기동 후 기동. `USER_SERVICE_URI`, `PRODUCT_SERVICE_URI`, `ORDER_SERVICE_URI`, `APP_JWT_SECRET`.
+- **RabbitMQ**: 이미지 `rabbitmq:3-management`. payment-service·settlement-service가 `SPRING_RABBITMQ_*`로 연결. healthcheck 통과 후 payment·settlement 기동.
+- **MySQL**: 이미지 `mysql:8`, `docker/mysql/init/01-create-databases.sql`로 5개 DB 생성. healthcheck 통과 후 서비스 기동.
+- **E2E**: Gateway 경유 `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh`. 직접 호출 `./scripts/e2e-flow.sh`. 상세 `docs/RUN-LOCAL.md` §6.
 
 ---
 
@@ -307,3 +341,5 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 - ~~user-service 비밀번호 BCrypt 해싱~~ (회원가입 시 encode, 로그인 시 matches)
 - ~~3단계: API Gateway~~ (Spring Cloud Gateway 8080, 라우팅·JWT 검증·X-User-Id 전달)
 - ~~이벤트 드리븐 (RabbitMQ)~~ (결제 완료: payment-service → RabbitMQ topic `payment.events` → settlement-service 구독)
+- ~~관측성 (Observability)~~ (Actuator·Prometheus·Grafana 메트릭, Micrometer Tracing·Zipkin 분산 추적)
+- ~~OpenAPI (Swagger)~~ (springdoc-openapi 2.5.0, 각 서비스 /swagger-ui.html, /v3/api-docs)

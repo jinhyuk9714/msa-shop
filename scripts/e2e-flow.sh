@@ -12,6 +12,8 @@ else
   PRODUCT_URL="${PRODUCT_URL:-http://localhost:8082}"
   ORDER_URL="${ORDER_URL:-http://localhost:8083}"
 fi
+# settlement-service는 Gateway 경로 없음. 직접 8085 사용.
+SETTLEMENT_URL="${SETTLEMENT_URL:-http://localhost:8085}"
 
 # 서비스 준비 대기 (Docker Compose 직후 Spring Boot 기동 시간 확보)
 wait_for_ready() {
@@ -87,6 +89,15 @@ if [ "$HTTP_CODE" = "201" ]; then
   if [ -n "$ORDER_ID" ]; then
     echo "=== 5. 주문 단건 조회 GET /orders/$ORDER_ID ==="
     curl -s -H "Authorization: Bearer $TOKEN" "$ORDER_URL/orders/$ORDER_ID" | python3 -m json.tool
+    echo ""
+    echo "=== 6. 당일 매출 집계 (settlement-service, RabbitMQ 이벤트 반영) ==="
+    TODAY=$(date +%Y-%m-%d)
+    SETTLE=$(curl -s "$SETTLEMENT_URL/settlements/daily?date=$TODAY" 2>/dev/null || true)
+    if [ -n "$SETTLE" ] && echo "$SETTLE" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+      echo "$SETTLE" | python3 -m json.tool
+    else
+      echo "(settlement-service 미기동 또는 당일 데이터 없음)"
+    fi
   fi
 else
   echo "주문 실패 (HTTP $HTTP_CODE). 재고 부족/결제 실패 등 확인."

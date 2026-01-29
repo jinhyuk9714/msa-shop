@@ -17,9 +17,9 @@
 
 ---
 
-## 2. 서비스 구성 (초기 버전)
+## 2. 서비스 구성 (현재 구현)
 
-각 서비스는 **독립 DB** 를 가진다. 통신은 우선 **REST + Resilience4j** 로 시작한다.
+각 서비스는 **독립 DB** 를 가진다. 클라이언트는 **API Gateway(8080)** 단일 진입점 사용. 서비스 간 통신: **REST + Resilience4j**, 결제 완료 → 정산은 **RabbitMQ** 이벤트.
 
 - **user-service**
   - 책임: 회원, 권한(Role), 로그인(JWT 발급)
@@ -49,24 +49,31 @@
     - `POST /payments` – 결제 시도
     - `POST /payments/{id}/cancel` – 결제 취소
 
-- **settlement-service** (2단계로 추가)
-  - 책임: 일별/월별 정산, 판매자/카테고리별 매출 집계
-  - 결제 완료 이벤트를 소비해서 집계 테이블을 관리하는 배치/서비스
+- **settlement-service** (2단계로 추가) ✓
+  - 책임: 일별/월별 매출 집계
+  - **RabbitMQ**에서 결제 완료 이벤트 구독(Queue `settlement.payment.completed`) → `recordPaymentCompleted` 호출. 배치 Job(일별 row 보정, 월별 집계).
 
-예상 프로젝트 구조:
+- **api-gateway** (3단계로 추가) ✓
+  - 책임: 클라이언트 단일 진입점(8080). `/users/**`, `/auth/**`, `/products/**`, `/orders/**` 라우팅.
+  - `/orders/**`, `/users/me` 요청 시 JWT 검증 후 `X-User-Id` 헤더로 downstream 전달.
+
+현재 프로젝트 구조:
 
 ```text
 msa-shop/
   docs/
     ARCHITECTURE.md
+    IMPLEMENTATION.md
+    RUN-LOCAL.md
     API-SPEC.md
     FAILURE-SCENARIOS.md
+  api-gateway/
   user-service/
   product-service/
   order-service/
   payment-service/
-  settlement-service/   # 2단계에 추가
-  docker-compose.yml
+  settlement-service/
+  docker-compose.yml   # api-gateway, RabbitMQ, MySQL, 5서비스
 ```
 
 ---
@@ -128,16 +135,17 @@ msa-shop/
 ## 5. 기술 스택
 
 - **공통**
-  - Spring Boot 3.x, Java 21
+  - Spring Boot 3.5, Java 21
   - Spring Web, Spring Data JPA, Spring Boot Actuator
-  - Resilience4j (CircuitBreaker, Retry)
+  - Resilience4j (CircuitBreaker, Retry) — order-service
 - **인프라**
-  - 로컬 단독 실행: H2 메모리 DB. Docker Compose 실행 시: **MySQL 8** (서비스별 DB: userdb, productdb, orderdb, paymentdb, settlementdb).
-  - Docker Compose 로 MySQL + 각 서비스 기동.
+  - 로컬 단독: H2 메모리 DB. **Docker Compose**: **MySQL 8**(5개 DB) + **RabbitMQ**(5672, 15672) + api-gateway + 5서비스.
 - **인증**
-  - user-service 에서 JWT 발급
-  - order-service 에서는 JWT 파싱/검증만 수행  
-    (또는 나중에 API Gateway 를 앞단에 두고 거기서 인증/인가 처리)
+  - **API Gateway**: `/orders/**`, `/users/me` 요청 시 JWT 검증 후 `X-User-Id` downstream 전달. user-service와 동일 `app.jwt.secret` 사용.
+  - **user-service**: JWT 발급(JJWT HS256), BCrypt 비밀번호.
+  - **order-service / user-service**: Gateway 경유 시 `X-User-Id` 사용, 직접 호출 시 `Authorization: Bearer` JWT 파싱.
+- **이벤트**
+  - **RabbitMQ**: 결제 완료 이벤트 — payment-service → Topic `payment.events` → settlement-service Queue `settlement.payment.completed` 구독.
 
 ---
 

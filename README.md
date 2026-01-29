@@ -13,7 +13,7 @@
 ## 기술 스택
 
 - Java 21, Spring Boot 3.5, Spring Data JPA
-- 로컬: H2. **Docker Compose**: API Gateway(8080) + MySQL 8 + RabbitMQ + 5서비스(8081~8085, 3306, 5672).
+- 로컬: H2. **Docker Compose**: API Gateway(8080) + MySQL 8 + RabbitMQ + 5서비스(8081~8085) + Prometheus(9090)·Grafana(3000)·Zipkin(9411).
 - **api-gateway**: Spring Cloud Gateway, JWT 검증·X-User-Id 전달.
 - user-service: Spring Security, JWT(HS256, JJWT)  
   order-service: Resilience4j (Retry, CircuitBreaker), Outbox 보상 스케줄러
@@ -32,6 +32,7 @@
 
 ```bash
 ./scripts/e2e-flow.sh
+./scripts/e2e-failure-scenarios.sh   # 재고 부족(409) 등 실패 시나리오
 ```
 
 **Docker Compose** (Gateway + MySQL + 5서비스):
@@ -46,11 +47,13 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 
 ## 문서
 
-| 문서                                               | 설명                                       |
-| -------------------------------------------------- | ------------------------------------------ |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)     | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
-| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) | 구현 현황·API·E2E·최근 완료 작업           |
-| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)           | 로컬 실행 가이드·E2E 시나리오              |
+| 문서                                                     | 설명                                       |
+| -------------------------------------------------------- | ------------------------------------------ |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)           | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
+| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)       | 구현 현황·모듈·API·E2E·Docker              |
+| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)                 | 로컬 실행 가이드·E2E 시나리오              |
+| [`docs/API-SPEC.md`](docs/API-SPEC.md)                   | 서비스별 REST API 스펙 요약                |
+| [`docs/FAILURE-SCENARIOS.md`](docs/FAILURE-SCENARIOS.md) | 장애/실패 시나리오와 대응 전략             |
 
 ## 모듈
 
@@ -60,3 +63,9 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 - **order-service** (8083): 주문 생성·조회, product/payment 연동, SAGA 보상(결제 실패 시 재고 복구), Outbox(결제 성공 후 주문 저장 실패 시 결제 취소·재고 복구)
 - **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용). 결제 완료 시 RabbitMQ로 이벤트 발행
 - **settlement-service** (8085): RabbitMQ에서 결제 완료 이벤트 구독, 일별 매출 집계(`GET /settlements/daily`)
+- **OpenAPI**: 각 서비스 `/swagger-ui.html`, `/v3/api-docs` (springdoc-openapi 2.5.0)
+
+## 테스트·배포
+
+- **단위·통합 테스트**: `./gradlew test`. order-service 통합 테스트는 Testcontainers MySQL + MockWebServer 사용(Docker 필요).
+- **K8s 예시**: [`k8s/README.md`](k8s/README.md), `k8s/order-service.yaml` (Deployment + Service, 헬스체크).

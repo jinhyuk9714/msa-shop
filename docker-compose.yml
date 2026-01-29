@@ -1,8 +1,44 @@
 # 빌드: 프로젝트 루트에서 docker-compose up --build
 # E2E: ./scripts/e2e-flow.sh (직접) 또는 GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh (Gateway 경유)
-# API Gateway: 8080 (클라이언트 단일 진입점). DB: MySQL 8 (서비스별 DB)
+# API Gateway: 8080. DB: MySQL 8. 관측성: Prometheus 9090, Grafana 3000, Zipkin 9411
 
 services:
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    depends_on:
+      - api-gateway
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+      - settlement-service
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
   api-gateway:
     build:
       context: .
@@ -15,6 +51,7 @@ services:
       PRODUCT_SERVICE_URI: http://product-service:8082
       ORDER_SERVICE_URI: http://order-service:8083
       APP_JWT_SECRET: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     depends_on:
       user-service:
         condition: service_started
@@ -79,6 +116,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     depends_on:
       mysql:
         condition: service_healthy
@@ -98,6 +136,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     depends_on:
       mysql:
         condition: service_healthy
@@ -139,6 +178,7 @@ services:
       APP_JWT_SECRET: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
       PRODUCT_SERVICE_BASE_URL: http://product-service:8082
       PAYMENT_SERVICE_BASE_URL: http://payment-service:8084
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     depends_on:
       mysql:
         condition: service_healthy

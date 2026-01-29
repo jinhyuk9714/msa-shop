@@ -58,6 +58,18 @@ gradle wrapper
 4. **주문 생성** `POST /orders` (order-service, Bearer JWT + productId=1, quantity=2)
 5. 성공 시 **주문 단건 조회** `GET /orders/{id}`
 
+**API 문서 (OpenAPI/Swagger)**: 각 서비스 기동 후 브라우저에서 Swagger UI·스펙 확인 가능.
+
+| 서비스 | Swagger UI | OpenAPI 스펙 |
+|--------|------------|---------------|
+| user-service | http://localhost:8081/swagger-ui.html | http://localhost:8081/v3/api-docs |
+| product-service | http://localhost:8082/swagger-ui.html | http://localhost:8082/v3/api-docs |
+| order-service | http://localhost:8083/swagger-ui.html | http://localhost:8083/v3/api-docs |
+| payment-service | http://localhost:8084/swagger-ui.html | http://localhost:8084/v3/api-docs |
+| settlement-service | http://localhost:8085/swagger-ui.html | http://localhost:8085/v3/api-docs |
+
+Docker Compose 사용 시 위 포트는 호스트에서 동일하게 접근 가능.
+
 ### 환경 변수 (기본값: localhost)
 
 ```bash
@@ -93,7 +105,8 @@ docker-compose up --build -d
 - **API Gateway**: 포트 **8080**. 클라이언트 단일 진입점. `/users/**`, `/auth/**` → user-service, `/products/**` → product-service, `/orders/**` → order-service. JWT 검증 후 `X-User-Id` 헤더로 downstream 전달.
 - **MySQL**: 포트 3306. 최초 기동 시 `docker/mysql/init/01-create-databases.sql`로 5개 DB 생성.
 - **RabbitMQ**: 포트 5672(AMQP), 15672(관리 UI). 결제 완료 이벤트는 payment-service → RabbitMQ → settlement-service로 전달.
-- **호스트 포트**: 8080(gateway), 8081(user), 8082(product), 8083(order), 8084(payment), 8085(settlement), 5672(rabbitmq), 15672(rabbitmq-management).
+- **관측성**: **Prometheus** 9090(메트릭 수집), **Grafana** 3000(대시보드, 로그인 admin/admin), **Zipkin** 9411(분산 추적 UI). 각 서비스 `/actuator/prometheus` 스크래핑. 주문 플로우(api-gateway → order → product/payment) 트레이스는 Zipkin에서 조회.
+- **호스트 포트**: 8080(gateway), 8081~8085(서비스), 3306(mysql), 5672·15672(rabbitmq), **9090(prometheus), 3000(grafana), 9411(zipkin)**.
 
 기동 후 E2E (Gateway 경유, 권장):
 

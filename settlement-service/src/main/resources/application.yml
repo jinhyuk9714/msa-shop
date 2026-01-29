@@ -16,9 +16,20 @@ spring:
     port: 5672
     username: guest
     password: guest
+  application:
+    name: settlement-service
 
 server:
   port: 8085
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
 
 # 배치 Job 스케줄 (cron)
 app:

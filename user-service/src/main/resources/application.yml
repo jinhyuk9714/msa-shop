@@ -14,9 +14,20 @@ spring:
   h2:
     console:
       enabled: true
+  application:
+    name: user-service
 
 server:
   port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
 
 # JWT (HS256). secret은 32자 이상 권장. order-service와 동일 값 사용.
 app:
