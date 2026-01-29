@@ -252,6 +252,15 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ---
 
+## Docker Compose
+
+- **docker-compose.yml**: user / product / order / payment 네 서비스. 루트에서 `docker-compose up --build -d` 실행.
+- **Dockerfile** (각 서비스 디렉터리): 멀티 모듈 루트를 빌드 컨텍스트로, `./gradlew :user-service:build` 등 실행 후 JAR만 복사해 실행.
+- **order-service**: `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너 호스트명 연결.
+- **E2E**: 기동 후 `./scripts/e2e-flow.sh`. 상세는 `docs/RUN-LOCAL.md` §6.
+
+---
+
 ## 앞으로의 확장 아이디어 (2단계용 메모)
 
 - Outbox 패턴 도입 및 주문/결제 보상 트랜잭션 구현

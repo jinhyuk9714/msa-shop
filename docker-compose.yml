@@ -1,22 +1,37 @@
-version: "3.8"
+# 빌드: 프로젝트 루트에서 docker-compose up --build
+# E2E: ./scripts/e2e-flow.sh (호스트 localhost:8081~8084)
 
 services:
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
     ports:
-      - "8081:8080"
+      - "8081:8081"
 
   product-service:
-    build: ./product-service
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
     ports:
-      - "8082:8080"
-
-  order-service:
-    build: ./order-service
-    ports:
-      - "8083:8080"
+      - "8082:8082"
 
   payment-service:
-    build: ./payment-service
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
     ports:
-      - "8084:8080"
+      - "8084:8084"
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      PRODUCT_SERVICE_BASE_URL: http://product-service:8082
+      PAYMENT_SERVICE_BASE_URL: http://payment-service:8084
+    depends_on:
+      - product-service
+      - payment-service

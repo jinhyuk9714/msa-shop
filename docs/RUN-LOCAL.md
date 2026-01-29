@@ -79,7 +79,23 @@ curl -s -X POST http://localhost:8083/orders \
   -d '{"productId":3,"quantity":10,"paymentMethod":"CARD"}'
 ```
 
-## 6. 트러블슈팅
+## 6. Docker Compose로 4서비스 기동 (선택)
+
+Docker·Docker Compose가 설치돼 있다면, 한 번에 네 서비스를 띄울 수 있다.
+
+```bash
+docker-compose up --build -d
+```
+
+기동 후 `./scripts/e2e-flow.sh` 로 E2E 검증. order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 product·payment 컨테이너에 연결한다.
+
+종료:
+
+```bash
+docker-compose down
+```
+
+## 7. 트러블슈팅
 
 - **Connection refused**: 해당 서비스 포트가 열려 있는지, `bootRun` 이 완료됐는지 확인.
 - **401 / 토큰 오류**: `POST /auth/login` 응답의 `accessToken`을 그대로 `Authorization: Bearer {token}` 에 넣었는지 확인.
