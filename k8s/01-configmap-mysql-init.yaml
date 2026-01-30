@@ -1,0 +1,12 @@
+# MySQL 최초 기동 시 실행할 DB 생성 스크립트
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init
+data:
+  01-create-databases.sql: |
+    CREATE DATABASE IF NOT EXISTS userdb;
+    CREATE DATABASE IF NOT EXISTS productdb;
+    CREATE DATABASE IF NOT EXISTS orderdb;
+    CREATE DATABASE IF NOT EXISTS paymentdb;
+    CREATE DATABASE IF NOT EXISTS settlementdb;

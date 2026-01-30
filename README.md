@@ -67,6 +67,6 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 
 ## 테스트·배포
 
-- **단위·통합 테스트**: `./gradlew test`. order-service 통합 테스트는 Testcontainers MySQL + MockWebServer 사용(Docker 필요).
+- **단위·통합 테스트**: `./gradlew test`. order/product/user/payment 서비스 통합 테스트는 Testcontainers(MySQL·RabbitMQ·MockWebServer) 사용(Docker 필요).
 - **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-- **K8s 예시**: [`k8s/README.md`](k8s/README.md), `k8s/order-service.yaml` (Deployment + Service, 헬스체크).
+- **K8s**: [`k8s/README.md`](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서·파일 구성. 배포 후 `kubectl port-forward svc/api-gateway 8080:8080` + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.

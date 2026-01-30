@@ -1,29 +1,29 @@
-# order-service (8083). DB·JWT는 Secret 참조.
+# settlement-service (8085). DB + RabbitMQ.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-service
+  name: settlement-service
   labels:
-    app: order-service
+    app: settlement-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: order-service
+      app: settlement-service
   template:
     metadata:
       labels:
-        app: order-service
+        app: settlement-service
     spec:
       containers:
-        - name: order-service
-          image: msa-shop-order-service:latest
+        - name: settlement-service
+          image: msa-shop-settlement-service:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8083
+            - containerPort: 8085
           env:
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:mysql://mysql:3306/orderdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul"
+              value: "jdbc:mysql://mysql:3306/settlementdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul"
             - name: SPRING_DATASOURCE_USERNAME
               value: "root"
             - name: SPRING_DATASOURCE_PASSWORD
@@ -35,42 +35,47 @@ spec:
               value: "com.mysql.cj.jdbc.Driver"
             - name: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
               value: "60000"
-            - name: PRODUCT_SERVICE_BASE_URL
-              value: "http://product-service:8082"
-            - name: PAYMENT_SERVICE_BASE_URL
-              value: "http://payment-service:8084"
-            - name: APP_JWT_SECRET
+            - name: SPRING_RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: msa-shop-secrets
-                  key: jwt-secret
+                  key: rabbitmq-username
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: msa-shop-secrets
+                  key: rabbitmq-password
           startupProbe:
             httpGet:
               path: /actuator/health
-              port: 8083
+              port: 8085
             periodSeconds: 10
             failureThreshold: 18
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8083
+              port: 8085
             initialDelaySeconds: 60
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health
-              port: 8083
+              port: 8085
             initialDelaySeconds: 90
             periodSeconds: 15
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-service
+  name: settlement-service
 spec:
   selector:
-    app: order-service
+    app: settlement-service
   ports:
-    - port: 8083
-      targetPort: 8083
+    - port: 8085
+      targetPort: 8085
   type: ClusterIP

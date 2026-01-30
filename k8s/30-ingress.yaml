@@ -1,0 +1,24 @@
+# Ingress: 외부 요청을 api-gateway(8080)로 전달. Ingress Controller 필요(예: minikube addons enable ingress).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: msa-shop-ingress
+  annotations:
+    # nginx ingress 예시 (클러스터에 설치된 컨트롤러에 맞게 변경)
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+  # 로컬 테스트 시 host 생략 시 모든 호스트로 적용. 운영 시 host 지정 권장.
+  # rules:
+  #   - host: msa-shop.local
+  #     http: ...

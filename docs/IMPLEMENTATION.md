@@ -259,14 +259,19 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 실행: `./gradlew test`. order-service는 `success`/`reserveFails`에 `MockRestServiceServer`, **`paymentFails`에 OkHttp `MockWebServer`** 사용(경로별 Dispatcher로 product/payment/release 스텁, 순서·매칭 이슈 회피). `mockwebserver` 의존성: `order-service/build.gradle` `testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")`.
 
-### 통합 테스트 (order-service)
+### 통합 테스트 (Testcontainers)
 
-- **OrderControllerIntegrationTest**: Testcontainers MySQL + MockWebServer(product/payment). `@SpringBootTest(webEnvironment = RANDOM_PORT)`, `@ServiceConnection` MySQL, `@DynamicPropertySource`로 product/payment base-url. POST /orders (X-User-Id) → 201, GET /orders/{id} → 200 검증. 실행 시 Docker 필요.
+- **order-service** `OrderControllerIntegrationTest`: Testcontainers MySQL + MockWebServer(product/payment). POST /orders (X-User-Id) → 201, GET /orders/{id} → 200 검증.
+- **product-service** `ProductControllerIntegrationTest`: Testcontainers MySQL. ProductDataLoader 시딩 후 GET /products, GET /products/{id} 검증.
+- **user-service** `UserControllerIntegrationTest`: Testcontainers MySQL. POST /users → 201, POST /auth/login → 200, GET /users/me (Bearer JWT) → 200 검증.
+- **payment-service** `PaymentControllerIntegrationTest`: Testcontainers MySQL + RabbitMQ. POST /payments → 200(success=true), amount 0 → 400, POST /payments/{id}/cancel → 200 검증.
+
+실행: `./gradlew test`. 통합 테스트는 Docker(Testcontainers) 필요. CI에서도 runner Docker로 실행.
 
 ### CI (GitHub Actions)
 
 - **워크플로**: `.github/workflows/ci.yml`. `main` 브랜치 푸시·PR 시 자동 실행.
-- **내용**: JDK 21(Temurin), Gradle 캐시, `./gradlew test`. order-service 통합 테스트는 runner의 Docker에서 Testcontainers로 실행.
+- **내용**: JDK 21(Temurin), Gradle 캐시, `./gradlew test`. order/product/user/payment 서비스 통합 테스트는 runner의 Docker에서 Testcontainers로 실행.
 
 ---
 

@@ -128,7 +128,18 @@ order-service는 `PRODUCT_SERVICE_BASE_URL` / `PAYMENT_SERVICE_BASE_URL` 로 pro
 docker-compose down
 ```
 
-## 7. 트러블슈팅
+## 7. Kubernetes에서 E2E (선택)
+
+K8s에 전체 스택을 배포한 뒤, Gateway를 port-forward 하거나 Ingress로 노출하고 E2E를 돌릴 수 있다. 상세는 [`k8s/README.md`](../k8s/README.md) 참고.
+
+**요약**
+
+1. `kubectl apply -f k8s/` 및 로컬 이미지 빌드(`./k8s/build-local-images.sh`) 후 Pod가 모두 `1/1 Running` 인지 확인.
+2. Gateway 노출: `kubectl port-forward svc/api-gateway 8080:8080` (백그라운드 또는 별도 터미널 유지).
+3. E2E 실행: `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh`
+4. Ingress로 80 포트 접속 가능하면: `GATEWAY_URL=http://localhost ./scripts/e2e-flow.sh`
+
+## 8. 트러블슈팅
 
 - **Connection refused**: 해당 서비스 포트가 열려 있는지, `bootRun` 이 완료됐는지 확인.
 - **401 / 토큰 오류**: `POST /auth/login` 응답의 `accessToken`(JWT)을 그대로 `Authorization: Bearer {token}` 에 넣었는지 확인. 만료된 JWT면 재로그인.
