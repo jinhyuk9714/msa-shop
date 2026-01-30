@@ -19,7 +19,7 @@
 | settlement-service | http://localhost:8085/api-docs.html |
 
 - **모든 서비스**: `/api-docs.html` 로 Swagger UI 접속 (CDN 기반). OpenAPI JSON은 `/v3/api-docs`.
-- **API Gateway(8080)** 는 Swagger UI 없음. 위 포트에서 각 서비스 문서 확인.
+- **API Gateway 통합 Swagger**: **http://localhost:8080/api-docs** → 단일 페이지에서 드롭다운으로 User/Product/Order/Payment/Settlement 서비스 API 선택. Gateway가 각 서비스 `/v3/api-docs`를 프록시함.
 
 ---
 
@@ -38,12 +38,13 @@ kubectl port-forward svc/msa-shop-settlement-service 8085:8085
 ```
 
 이후 브라우저에서 **각 서비스 `/api-docs.html`** 로 접속 (예: http://localhost:8081/api-docs.html).  
+- **Gateway 통합**: api-gateway port-forward 후 **http://localhost:8080/api-docs** 로 접속하면 5개 서비스 API를 한 페이지에서 선택 가능.
 
 ---
 
 ## 인증이 필요한 API (Swagger UI에서 테스트)
 
-- **order-service**: `POST /orders`, `GET /orders/me`, `PATCH /orders/{id}/cancel` 등 → JWT 필요  
+- **order-service**: `POST /orders`, `GET /orders/me`, `PATCH /orders/{id}/cancel`, **GET/POST/PATCH/DELETE /cart**, `/cart/items` 등 → JWT 필요  
 - **user-service**: `GET /users/me` → JWT 필요  
 
 Swagger UI에서:

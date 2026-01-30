@@ -18,13 +18,16 @@
 **C. Gateway + E2E 일괄 (429 없이)**  
 1) B처럼 5개 서비스 + RabbitMQ 기동  
 2) api-gateway: `RATE_LIMIT_PER_MINUTE=0 ./gradlew :api-gateway:bootRun`  
-3) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh` → 8개 시나리오 일괄
+3) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh` → 9개 시나리오 일괄(기본 흐름·인증·주문·실패·404·상품 검색·정산·장바구니·Rate Limit)
 
 **E. Helm/K8s**  
-1) `./scripts/helm-deploy.sh` (또는 `--values helm/msa-shop/values-ghcr.yaml`)  
+1) `./scripts/helm-deploy.sh` (또는 `--values helm/msa-shop/values-ghcr.yaml`) — Helm으로 설치  
 2) `kubectl get pods -n default -w` 로 Pod 준비 대기  
-3) `kubectl port-forward svc/msa-shop-api-gateway 8080:8080` (별도 터미널 유지)  
-4) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh`
+3) `kubectl port-forward svc/msa-shop-api-gateway 8080:8080 -n msa-shop` (별도 터미널 유지)  
+4) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh`  
+
+Docker Desktop에서 K8s를 켜고 끌 때 컨텍스트가 지저분해지면 [DOCKER-DESKTOP-K8S-CLEANUP.md](DOCKER-DESKTOP-K8S-CLEANUP.md) 참고.  
+
 
 ---
 
@@ -188,6 +191,7 @@ Docker·Docker Compose가 설치돼 있다면, **MySQL 8**과 다섯 서비스�
 docker-compose up --build -d
 ```
 
+- **첫 빌드**: 6개 서비스 각각 컨테이너 안에서 Gradle로 빌드하므로 **10~20분** 걸릴 수 있음. **두 번째부터**는 Docker·Gradle 캐시 덕분에 훨씬 빨라짐. (Dockerfile에 Gradle 캐시 마운트 적용됨.)
 - **API Gateway**: 포트 **8080**. 클라이언트 단일 진입점. `/users/**`, `/auth/**` → user-service, `/products/**` → product-service, `/orders/**` → order-service. JWT 검증 후 `X-User-Id` 헤더로 downstream 전달.
 - **MySQL**: 포트 3306. 최초 기동 시 `docker/mysql/init/01-create-databases.sql`로 5개 DB 생성.
 - **RabbitMQ**: 포트 5672(AMQP), 15672(관리 UI). 결제 완료 이벤트는 payment-service → RabbitMQ → settlement-service로 전달.
@@ -231,6 +235,9 @@ K8s에 전체 스택을 배포한 뒤, Gateway를 port-forward 하거나 Ingress
 - **401 / 토큰 오류**: `POST /auth/login` 응답의 `accessToken`(JWT)을 그대로 `Authorization: Bearer {token}` 에 넣었는지 확인. 만료된 JWT면 재로그인.
 - **상품 없음**: product-service `ProductDataLoader` 가 테스트 상품 3종을 시딩함. H2 재시작 시 다시 들어감.
 - **Docker MySQL 연결 실패**: MySQL 컨테이너가 healthy 된 뒤 서비스가 기동하므로, `docker-compose up` 후 잠시 기다렸다가 E2E 실행.
+- **Docker Compose에서 GET /products 500 또는 주문 시 502(결제 500)**  
+  - product-service는 `prod,local` 프로파일로 **인메모리 캐시** 사용(Redis 미의존).  
+  - payment-service 500이면 `docker-compose logs payment-service --tail 80` 으로 예외 확인(RabbitMQ·DB 연결 등).
 
 ### BCrypt 전환 후 기존 계정 로그인 안 될 때
 

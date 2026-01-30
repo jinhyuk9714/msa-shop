@@ -1,84 +1,82 @@
 # MSA Shop
 
-쇼핑몰 도메인 기반 **마이크로서비스 아키텍처(MSA)** 연습 프로젝트입니다.  
-회원, 상품, 주문, 결제(정산 예정)를 여러 서비스로 나누어 구현합니다.
+쇼핑몰 도메인으로 **마이크로서비스(MSA)** 를 연습하는 프로젝트입니다.  
+회원·상품·주문·결제·정산을 서비스별로 나누고, API Gateway·이벤트·보상 트랜잭션을 경험할 수 있습니다.
 
-## 목표
+---
 
-- User / Product / Order / Payment / Settlement 로 서비스 경계 나누기
-- 서비스 간 통신 (REST + Resilience4j)
-- 주문/결제 흐름에서 SAGA·보상 트랜잭션 맛보기
-- 결제 완료 이벤트 기반 정산/매출 집계 배치
+## 프로젝트에서 다루는 것
 
-## 기술 스택
+- **서비스 경계**: User, Product, Order, Payment, Settlement + API Gateway
+- **서비스 간 통신**: REST, Resilience4j(Retry·CircuitBreaker)
+- **주문/결제 흐름**: 재고 예약 → 결제 → 주문 저장. 실패 시 재고 복구(SAGA), 결제 성공 후 주문 저장 실패 시 Outbox로 보상
+- **이벤트**: 결제 완료 시 RabbitMQ 발행 → Settlement가 일/월 매출 집계
+- **기타**: JWT 인증, 장바구니(CRUD), 상품 검색·카테고리, Rate Limit, 관측성(Prometheus·Grafana·Zipkin)
 
-- Java 21, Spring Boot 3.5, Spring Data JPA
-- 로컬: H2. **Docker Compose**: API Gateway(8080) + MySQL 8 + RabbitMQ + 5서비스(8081~8085) + Prometheus(9090)·Grafana(3000)·Zipkin(9411).
-- **api-gateway**: Spring Cloud Gateway, JWT 검증·X-User-Id 전달.
-- user-service: Spring Security, JWT(HS256, JJWT)  
-  order-service: Resilience4j (Retry, CircuitBreaker), Outbox 보상 스케줄러
+**기술 스택**: Java 21, Spring Boot 3.5, Spring Data JPA. 로컬 H2 / Docker·K8s MySQL 8. API Gateway는 Spring Cloud Gateway.
 
-## 빌드 및 실행
+---
+
+## 빠르게 돌려보기
+
+**테스트**
 
 ```bash
-./gradlew build -x test
-./gradlew :user-service:bootRun     # 8081
+./gradlew test
+```
+
+**로컬에서 서비스만**
+
+```bash
+./gradlew :user-service:bootRun      # 8081
 ./gradlew :product-service:bootRun  # 8082
-./gradlew :payment-service:bootRun  # 8084
 ./gradlew :order-service:bootRun    # 8083
-```
-
-네 서비스 기동 후 E2E:
-
-```bash
+./gradlew :payment-service:bootRun  # 8084
+./gradlew :settlement-service:bootRun # 8085
+# + RabbitMQ (예: docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management)
 ./scripts/e2e-flow.sh
-./scripts/e2e-failure-scenarios.sh   # 재고 부족(409) 등 실패 시나리오
 ```
 
-**Docker Compose** (Gateway + MySQL + 5서비스):
+**Docker Compose로 전체 스택** (Gateway + MySQL + RabbitMQ + 6개 앱)
 
 ```bash
 docker-compose up --build -d
 GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 ```
 
-- **Gradle Wrapper**: `gradle-wrapper.jar` 없으면 `gradle wrapper` 한 번 실행.
-- 상세 절차·트러블슈팅: [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)
+첫 빌드는 10~20분 걸릴 수 있고, 두 번째부터는 캐시로 빨라집니다.  
+상세·트러블슈팅은 [docs/RUN-LOCAL.md](docs/RUN-LOCAL.md) 참고.
 
-## 문서
+---
 
-| 문서 | 설명 |
-|------|------|
-| [docs/README.md](docs/README.md) | 문서 목차(인덱스) |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
-| [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 구현 현황·모듈·API·E2E·Docker |
-| [docs/RUN-LOCAL.md](docs/RUN-LOCAL.md) | 로컬 실행 가이드·E2E 시나리오 |
-| [docs/API-SPEC.md](docs/API-SPEC.md) | 서비스별 REST API 스펙 요약 |
-| [docs/OPENAPI.md](docs/OPENAPI.md) | Swagger UI 접근·테스트 순서 (로컬/K8s) |
-| [docs/FAILURE-SCENARIOS.md](docs/FAILURE-SCENARIOS.md) | 장애/실패 시나리오와 대응 전략 |
-| [docs/PROFILES-AND-SECRETS.md](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리 |
-| [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) | 다음 단계 가이드(리소스·HPA·기능 확장) |
-| [docs/CI-IMAGES.md](docs/CI-IMAGES.md) | CI 이미지 빌드(ghcr.io)·Helm 배포 |
-| [docs/ARGOCD.md](docs/ARGOCD.md) | Argo CD 연동(Git push → Helm 자동 동기화) |
-| [docs/K8S-EXPANSION.md](docs/K8S-EXPANSION.md) | K8s 확장 계획·ConfigMap·Secret |
-| [k8s/README.md](k8s/README.md) | Kubernetes 매니페스트 배포 순서 |
-| [helm/README.md](helm/README.md) | Helm 차트 설치·리소스·HPA |
+## 서비스 구성
 
-## 모듈
+| 서비스 | 포트 | 역할 |
+|--------|------|------|
+| **api-gateway** | 8080 | 단일 진입점, 라우팅·JWT 검증·Rate Limit |
+| **user-service** | 8081 | 회원가입, 로그인(JWT), GET /users/me |
+| **product-service** | 8082 | 상품/재고, 검색·카테고리, 재고 예약·복구, 캐시 |
+| **order-service** | 8083 | 주문 생성·조회·취소, **장바구니** CRUD, SAGA·Outbox 보상 |
+| **payment-service** | 8084 | 가짜 PG 결제·취소, RabbitMQ 이벤트 발행 |
+| **settlement-service** | 8085 | RabbitMQ 구독, 일/월 매출 집계 |
 
-- **api-gateway** (8080): 클라이언트 단일 진입점, 라우팅·JWT 검증·X-User-Id 전달.
-- **user-service** (8081): 회원가입, 로그인(JWT 발급), GET /users/me, 409 중복 이메일
-- **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, `POST /internal/stocks/release`(보상), 테스트 상품 시딩
-- **order-service** (8083): 주문 생성·조회, product/payment 연동, SAGA 보상(결제 실패 시 재고 복구), Outbox(결제 성공 후 주문 저장 실패 시 결제 취소·재고 복구)
-- **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용). 결제 완료 시 RabbitMQ로 이벤트 발행
-- **settlement-service** (8085): RabbitMQ에서 결제 완료 이벤트 구독, 일별 매출 집계(`GET /settlements/daily`)
-- **OpenAPI**: 각 서비스 `/api-docs.html` (Swagger UI), `/v3/api-docs` (springdoc-openapi 2.8.15)
+Gateway 경유 시 `http://localhost:8080` 하나로 위 API를 모두 호출할 수 있고, `/api-docs` 에서 통합 Swagger UI를 볼 수 있습니다.
+
+---
 
 ## 테스트·배포
 
-- **다 테스트 해보기**: [docs/RUN-LOCAL.md](docs/RUN-LOCAL.md) 상단 "다 테스트 해보는 법" 참고 (단위 테스트 → 로컬 E2E → Gateway 일괄 → Docker → Helm).
-- **단위·통합 테스트**: `./gradlew test`. order/product/user/payment 서비스 통합 테스트는 Testcontainers(MySQL·RabbitMQ·MockWebServer) 사용(Docker 필요).
-- **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-- **K8s**: [k8s/README.md](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서. 배포 후 port-forward + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.
-- **Helm**: [helm/README.md](helm/README.md) — 동일 스택을 Helm 차트로 설치·업그레이드. 리소스·HPA(order-service) 설정 포함.
-- **CI 이미지 빌드**: main 푸시 시 6개 서비스 이미지 자동 빌드 → ghcr.io 푸시. [.github/workflows/build-images.yml](.github/workflows/build-images.yml), [docs/CI-IMAGES.md](docs/CI-IMAGES.md). `values-ghcr.yaml` 로 Helm 배포.
+- **E2E**: `./scripts/e2e-flow.sh`(기본 흐름), `./scripts/e2e-all-scenarios.sh`(9개 시나리오). Gateway 쓰려면 `GATEWAY_URL=http://localhost:8080` 설정.
+- **CI**: push/PR 시 단위·통합 테스트 후 **E2E**(Docker Compose + e2e-flow.sh) 자동 실행. [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- **이미지**: main 푸시 시 6개 서비스 이미지 빌드 → ghcr.io. [.github/workflows/build-images.yml](.github/workflows/build-images.yml)
+- **K8s/Helm**: [helm/README.md](helm/README.md). `./scripts/helm-deploy.sh` 로 설치·업그레이드.
+
+---
+
+## 더 보기
+
+- **시작·실행**: [RUN-LOCAL.md](docs/RUN-LOCAL.md) — 로컬/Docker/E2E 순서, 트러블슈팅
+- **아키텍처·API**: [ARCHITECTURE.md](docs/ARCHITECTURE.md), [API-SPEC.md](docs/API-SPEC.md), [IMPLEMENTED-SUMMARY.md](docs/IMPLEMENTED-SUMMARY.md)
+- **장애·설정**: [FAILURE-SCENARIOS.md](docs/FAILURE-SCENARIOS.md), [PROFILES-AND-SECRETS.md](docs/PROFILES-AND-SECRETS.md)
+- **배포·다음 단계**: [CI-IMAGES.md](docs/CI-IMAGES.md), [helm/README.md](helm/README.md), [NEXT-STEPS.md](docs/NEXT-STEPS.md)
+- **문서 전체 목차**: [docs/README.md](docs/README.md)

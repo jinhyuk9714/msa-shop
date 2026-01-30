@@ -19,11 +19,42 @@ spring:
         - id: order-service
           uri: ${ORDER_SERVICE_URI:http://localhost:8083}
           predicates:
-            - Path=/orders/**
+            - Path=/orders/**,/cart/**
         - id: settlement-service
           uri: ${SETTLEMENT_SERVICE_URI:http://localhost:8085}
           predicates:
             - Path=/settlements/**
+        # 통합 Swagger: 각 서비스 /v3/api-docs 프록시 (경로만 교체)
+        - id: api-docs-user
+          uri: ${USER_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/api-docs/user-service
+          filters:
+            - RewritePath=/api-docs/user-service,/v3/api-docs
+        - id: api-docs-product
+          uri: ${PRODUCT_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/api-docs/product-service
+          filters:
+            - RewritePath=/api-docs/product-service,/v3/api-docs
+        - id: api-docs-order
+          uri: ${ORDER_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/api-docs/order-service
+          filters:
+            - RewritePath=/api-docs/order-service,/v3/api-docs
+        - id: api-docs-payment
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/api-docs/payment-service
+          filters:
+            - RewritePath=/api-docs/payment-service,/v3/api-docs
+        - id: api-docs-settlement
+          uri: ${SETTLEMENT_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/api-docs/settlement-service
+          filters:
+            - RewritePath=/api-docs/settlement-service,/v3/api-docs
   application:
     name: api-gateway
 

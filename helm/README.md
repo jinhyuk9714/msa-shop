@@ -8,7 +8,15 @@ K8s 매니페스트(`k8s/`)를 Helm 차트로 패키지한 버전입니다.
 - **Helm 3** 설치: [Helm 설치 가이드](https://helm.sh/docs/intro/install/)
 - Kubernetes 클러스터·Ingress Controller·이미지 준비는 `k8s/README.md`와 동일
 
+K8s 배포는 이 Helm 차트로 설치·업그레이드하면 됩니다.
+
 **기존에 `kubectl apply -f k8s/`로 배포한 적이 있으면** Secret·ConfigMap·Deployment 등 이름이 겹칩니다. Helm 설치 전에 기존 리소스를 삭제하세요 (아래 트러블슈팅).
+
+### 기본값: 가벼운 설치 (로컬/Docker Desktop 권장)
+
+- **observability.enabled: false** — Prometheus, Grafana, Zipkin 미배포 (메모리·OOM 이슈 감소).
+- **redis.enabled: false** — Redis 미배포, product-service는 인메모리 캐시(profile local) 사용.
+- 관측성·Redis가 필요하면 `--set observability.enabled=true` 또는 `--set redis.enabled=true` 로 켜면 됩니다.
 
 ## 순서대로 배포하기
 

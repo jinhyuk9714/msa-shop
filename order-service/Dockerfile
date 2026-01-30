@@ -3,7 +3,9 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 
 COPY . .
-RUN ./gradlew :order-service:build -x test --no-daemon
+RUN --mount=type=cache,target=/root/.gradle/caches \
+    --mount=type=cache,target=/root/.gradle/wrapper \
+    ./gradlew :order-service:build -x test --no-daemon
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

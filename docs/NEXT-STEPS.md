@@ -73,7 +73,7 @@
 | 기능 | 설명 |
 |------|------|
 | ~~주문 취소 API~~ | ✅ `PATCH /orders/{id}/cancel` — PAID 주문 취소 (결제 취소 + 재고 복구) |
-| 장바구니 서비스 | 별도 서비스 또는 order-service 확장 |
+| ~~장바구니~~ | ✅ order-service: GET/POST/PATCH/DELETE /cart, /cart/items. 재고 검증·수량 합산. E2E: e2e-cart-scenarios.sh |
 | ~~상품 카테고리~~ | ✅ product-service: Product.category, GET /products?category=, 시딩(전자/생활/식품) |
 | ~~상품 검색~~ | ✅ `GET /products?name=...&minPrice=...&maxPrice=...` (이름 부분 일치, 가격 범위) |
 | ~~정산 API Gateway 노출~~ | ✅ `app.settlements.auth-required`(기본 false). true면 `/settlements/**` JWT 필수. Helm: `apiGateway.settlementsAuthRequired` |
@@ -91,9 +91,39 @@
 
 ---
 
+## 프로젝트 가볍게 쓰기 (기본값)
+
+Helm 기본값을 **가벼운 설치**로 바꿨습니다. 로컬/Docker Desktop에서 OOM·오류를 줄이려면:
+
+- **observability.enabled: false** (기본) — Prometheus, Grafana, Zipkin 미배포
+- **redis.enabled: false** (기본) — Redis 미배포, product-service는 인메모리 캐시
+
+필요 시 `--set observability.enabled=true` 또는 `--set redis.enabled=true` 로 켜면 됩니다. [helm/README.md](../helm/README.md)
+
+---
+
+## 다음 단계 추천 (우선순위)
+
+지금 상태에서 이어서 할 수 있는 것들을 **난이도·효과** 기준으로 정리했습니다.
+
+| 순위 | 항목 | 내용 | 예상 공수 |
+|------|------|------|------------|
+| **1** | **장바구니** | 주문 전 상품 담기. 별도 `cart-service` 또는 order-service에 Cart 엔티티·API 추가. Redis 세션 또는 DB 저장. | 중 |
+| **2** | **values-prod 보강** | 실제 클러스터·레지스트리에 맞게 values-prod.yaml 작성(이미지 태그, 리소스, Ingress 호스트). 운영 배포 연습. | 소 |
+| **3** | **시크릿 도구 도입** | Sealed Secrets / External Secrets Operator / Vault 중 하나로 시크릿 주입. [SECRETS-OPERATIONS.md](SECRETS-OPERATIONS.md) 참고. | 중 |
+| **4** | **Grafana 대시보드** | Prometheus 메트릭용 대시보드 JSON 추가(요청 수, 지연시간, 에러율 등). `docker/grafana/provisioning/dashboards` 에 넣어 자동 로드. | 소 |
+| **5** | ~~CI에 E2E 추가~~ | ✅ `.github/workflows/ci.yml` 에 E2E job 추가. `build-and-test` 통과 후 `docker-compose up --build -d` → 대기 → `e2e-flow.sh` (GATEWAY 경유) → 실패 시 CI 실패. | 완료 |
+| **6** | **다른 서비스 HPA** | product-service, payment-service 등 트래픽 변동 큰 서비스에 HPA 추가. Helm values·template 확장. | 소 |
+| **7** | ~~API Gateway 통합 Swagger~~ | ✅ 완료. GET /api-docs → 단일 Swagger UI, /api-docs/user-service 등 프록시. [OPENAPI.md](OPENAPI.md) |
+
+- **기능 확장**에 집중하면 → **2번 values-prod** 또는 추가 기능(주문 from-cart 등).
+- **운영/배포**에 집중하면 → **2번 values-prod**, **3번 시크릿**.
+- **관측성/품질**에 집중하면 → **4번 Grafana**, **5번 CI E2E**, **6번 HPA**, **7번 Gateway Swagger**.
+
+---
+
 ## 빠르게 시도해볼 수 있는 것
 
-- **Argo CD 설치·연동**: ✅ `argocd/application.yaml` 추가. Git push 시 Helm 차트 자동 동기화. [docs/ARGOCD.md](ARGOCD.md)
 - **HPA**: Helm 기본값으로 order-service HPA 활성화됨. 비활성화 시 `--set orderService.hpa.enabled=false`. [`helm/README.md`](../helm/README.md) 참고.
 - **values-prod.yaml 작성**: 운영용 values 파일 예시
 

@@ -41,6 +41,8 @@ spec:
               value: "http://{{ .Release.Name }}-product-service:8082"
             - name: ORDER_SERVICE_URI
               value: "http://{{ .Release.Name }}-order-service:8083"
+            - name: PAYMENT_SERVICE_URI
+              value: "http://{{ .Release.Name }}-payment-service:8084"
             - name: SETTLEMENT_SERVICE_URI
               value: "http://{{ .Release.Name }}-settlement-service:8085"
             - name: SETTLEMENTS_AUTH_REQUIRED

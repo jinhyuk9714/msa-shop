@@ -139,10 +139,11 @@ public class OrderService {
      * product-service GET /products/{id} 호출.
      * - @Retry: 실패 시 재시도 (application.yml maxAttempts, waitDuration).
      * - @CircuitBreaker: 연속 실패 시 회로 열어 과부하 방지 (slidingWindowSize, failureRateThreshold 등).
+     * - CartService 등에서 상품 검증용으로도 사용.
      */
     @Retry(name = "productService")
     @CircuitBreaker(name = "productService")
-    ProductResponse getProduct(Long productId) {
+    public ProductResponse getProduct(Long productId) {
         String url = productServiceBaseUrl + "/products/" + productId;
         ResponseEntity<ProductResponse> response =
                 restTemplate.getForEntity(url, ProductResponse.class);

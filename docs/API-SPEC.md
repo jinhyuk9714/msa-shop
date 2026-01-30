@@ -12,9 +12,10 @@
 | `/auth/**`     | user-service:8081    | permitAll                              |
 | `/products/**` | product-service:8082 | permitAll                              |
 | `/orders/**`   | order-service:8083   | JWT 검증 후 X-User-Id 전달             |
+| `/cart/**`     | order-service:8083   | JWT 검증 후 X-User-Id 전달             |
 
 - JWT 검증 실패/없음 → **401 Unauthorized**
-- 인증 필요 경로: `POST/GET /orders/**`, `GET /users/me`
+- 인증 필요 경로: `POST/GET /orders/**`, `GET /cart/**`, `GET /users/me`
 
 ---
 
@@ -80,6 +81,11 @@
 | GET    | `/orders/{id}`     | 주문 단건 조회 | Bearer JWT 또는 X-User-Id |
 | GET    | `/orders/me`       | 내 주문 목록   | Bearer JWT 또는 X-User-Id |
 | PATCH  | `/orders/{id}/cancel` | 주문 취소  | Bearer JWT 또는 X-User-Id |
+| GET    | `/cart`            | 장바구니 조회  | Bearer JWT 또는 X-User-Id |
+| POST   | `/cart/items`      | 장바구니 추가  | Bearer JWT 또는 X-User-Id |
+| PATCH  | `/cart/items/{productId}` | 수량 변경 | Bearer JWT 또는 X-User-Id |
+| DELETE | `/cart/items/{productId}` | 항목 삭제 | Bearer JWT 또는 X-User-Id |
+| DELETE | `/cart`            | 장바구니 비우기 | Bearer JWT 또는 X-User-Id |
 
 ### 요청/응답
 
@@ -104,6 +110,31 @@
   Response 200: `{ "id", "userId", "productId", "quantity", "totalAmount", "status": "CANCELLED" }`  
   Response 409: 이미 취소됨/결제 정보 없음 `{ "error": "CONFLICT", "message": "..." }`  
   Response 404: 주문 없음 또는 본인 주문 아님
+
+### 장바구니
+
+- **GET /cart**  
+  Response 200: `[{ "productId", "quantity" }, ...]`  
+  Response 401: 토큰 없음/오류
+
+- **POST /cart/items**  
+  Request: `{ "productId": number, "quantity": number }`  
+  Response 201: `{ "productId", "quantity" }` (동일 상품이 있으면 수량 합산)  
+  Response 409: 재고 부족 `{ "error": "CONFLICT", "message": "..." }`  
+  Response 401: 토큰 없음/오류
+
+- **PATCH /cart/items/{productId}**  
+  Request: `{ "quantity": number }` (0 이하면 삭제)  
+  Response 200: `{ "productId", "quantity" }`  
+  Response 204: quantity 0으로 삭제된 경우  
+  Response 404: 해당 상품이 장바구니에 없음  
+  Response 409: 재고 부족
+
+- **DELETE /cart/items/{productId}**  
+  Response 204: 삭제 완료
+
+- **DELETE /cart**  
+  Response 204: 장바구니 비우기 완료
 
 ---
 

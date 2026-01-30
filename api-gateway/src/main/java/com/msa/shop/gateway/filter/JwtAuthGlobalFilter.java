@@ -47,6 +47,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         var list = new java.util.ArrayList<Pattern>();
         list.add(Pattern.compile("^/orders/.*"));
+        list.add(Pattern.compile("^/cart/.*"));
         list.add(Pattern.compile("^/users/me$"));
         if (settlementsAuthRequired) {
             list.add(Pattern.compile("^/settlements/.*"));

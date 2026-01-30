@@ -38,13 +38,14 @@ run_one "4. 실패 시나리오 (재고 부족 409, 취소 성공·재취소 409
 run_one "5. 404 (없는 주문 조회)" "./scripts/e2e-not-found-scenarios.sh" || FAILED=$((FAILED+1))
 run_one "6. 상품 검색 (name, minPrice, maxPrice)" "./scripts/e2e-product-search.sh" || FAILED=$((FAILED+1))
 run_one "7. 정산 (일별/월별 목록·특정 일자·월)" "./scripts/e2e-settlement-scenarios.sh" || FAILED=$((FAILED+1))
+run_one "8. 장바구니 (추가→조회→수량 변경→삭제→비우기)" "./scripts/e2e-cart-scenarios.sh" || FAILED=$((FAILED+1))
 
 if [ -n "$GATEWAY_URL" ]; then
-  run_one "8. Rate Limit (429)" "./scripts/e2e-rate-limit.sh" || FAILED=$((FAILED+1))
+  run_one "9. Rate Limit (429)" "./scripts/e2e-rate-limit.sh" || FAILED=$((FAILED+1))
 else
   echo ""
   echo "########################################"
-  echo "# 8. Rate Limit (스킵: GATEWAY_URL 미설정)"
+  echo "# 9. Rate Limit (스킵: GATEWAY_URL 미설정)"
   echo "########################################"
   echo "GATEWAY_URL=http://localhost:8080 ./scripts/e2e-rate-limit.sh 로 별도 실행"
 fi

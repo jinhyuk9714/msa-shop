@@ -43,7 +43,7 @@ rabbitmq:
       cpu: "500m"
 
 redis:
-  enabled: true
+  enabled: false  # true로 하면 Redis 배포 + product-service 캐시 사용. false면 가벼운 기본 설치.
   image: redis:7-alpine
 
 apiGateway:
@@ -100,9 +100,9 @@ ingress:
   className: nginx
   # host: msa-shop.local  # 운영 시 설정
 
-# 관측성 (Prometheus, Grafana, Zipkin). 비활성화: observability.enabled: false
+# 관측성 (Prometheus, Grafana, Zipkin). 기본 비활성화로 가벼운 설치. 필요 시 true.
 observability:
-  enabled: true
+  enabled: false
   prometheus:
     image: prom/prometheus:latest
     retention: 15d

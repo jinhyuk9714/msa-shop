@@ -25,3 +25,37 @@ jobs:
 
       - name: Build and run tests
         run: ./gradlew test --no-daemon --stacktrace
+
+  e2e:
+    name: E2E (Docker Compose)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker-compose up --build -d
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for services (Gateway + product-service)..."
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8080/products >/dev/null 2>&1; then
+              echo "Services ready."
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "Timeout waiting for services (4.5 min)"
+              docker-compose logs --tail 50
+              exit 1
+            fi
+            sleep 3
+          done
+
+      - name: Run E2E
+        run: GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
+
+      - name: Stop services
+        if: always()
+        run: docker-compose down -v
