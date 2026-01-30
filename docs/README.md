@@ -38,6 +38,7 @@
 | 문서 | 설명 |
 |------|------|
 | [CI-IMAGES.md](CI-IMAGES.md) | CI 이미지 빌드(ghcr.io), Helm 배포(values-ghcr) |
+| [ARGOCD.md](ARGOCD.md) | Argo CD 연동, Git push → Helm 차트 자동 동기화 |
 | [K8S-EXPANSION.md](K8S-EXPANSION.md) | K8s 확장 계획, ConfigMap·Secret·리소스 |
 
 ---

@@ -2,6 +2,7 @@ package com.msa.shop.product.application;
 
 import com.msa.shop.product.domain.Product;
 import com.msa.shop.product.domain.ProductRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "products", unless = "#result.isEmpty()")
     public List<Product> getProducts() {
         return productRepository.findAll();
     }
@@ -34,6 +36,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "product", key = "#id")
     public Product getProduct(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));

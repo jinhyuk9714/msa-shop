@@ -1,0 +1,31 @@
+# Argo CD Application: msa-shop Helm 차트를 Git 저장소에서 동기화.
+# 사용: Argo CD 설치 후 이 매니페스트를 적용하거나, Argo CD UI에서 "New App" → "Edit as YAML" 후 붙여넣기.
+# repoURL을 본인 저장소로 수정 후 적용.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: msa-shop
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jinhyuk9714/msa-shop.git
+    targetRevision: main
+    path: helm/msa-shop
+    helm:
+      valueFiles:
+        - values.yaml
+      # ghcr.io 이미지 사용 시: - values-ghcr.yaml 추가 (values-ghcr.yaml의 owner 수정 필요)
+      # 프로덕션: - values-prod.yaml 추가
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: msa-shop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

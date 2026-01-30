@@ -46,6 +46,12 @@ spec:
               value: "com.mysql.cj.jdbc.Driver"
             - name: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
               value: "60000"
+            {{- if .Values.redis.enabled }}
+            - name: SPRING_DATA_REDIS_HOST
+              value: "{{ .Release.Name }}-redis"
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            {{- end }}
             {{- if .Values.observability.enabled }}
             - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
               value: {{ include "msa-shop.zipkinUrl" . }}

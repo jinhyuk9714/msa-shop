@@ -27,9 +27,15 @@ mysql:
 rabbitmq:
   image: rabbitmq:3-management
 
+redis:
+  enabled: true
+  image: redis:7-alpine
+
 apiGateway:
   replicas: 1
   resources: {}  # 비우면 global defaultResources 사용 (템플릿에서 fallback)
+  # /settlements/** JWT 인증 필수 여부. true면 관리자(인증 사용자)만 정산 API 호출 가능.
+  settlementsAuthRequired: false
   image:
     repository: msa-shop-api-gateway
     tag: latest

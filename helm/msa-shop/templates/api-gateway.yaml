@@ -43,6 +43,8 @@ spec:
               value: "http://{{ .Release.Name }}-order-service:8083"
             - name: SETTLEMENT_SERVICE_URI
               value: "http://{{ .Release.Name }}-settlement-service:8085"
+            - name: SETTLEMENTS_AUTH_REQUIRED
+              value: "{{ .Values.apiGateway.settlementsAuthRequired | default false }}"
             {{- if .Values.observability.enabled }}
             - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
               value: {{ include "msa-shop.zipkinUrl" . }}

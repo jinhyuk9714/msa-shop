@@ -1,0 +1,6 @@
+# 로컬 bootRun 시 Redis 없이 실행할 때: spring.profiles.active=local
+# Redis 자동구성 제외 → ConcurrentMapCacheManager 사용
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration

@@ -1,5 +1,33 @@
 # 로컬 실행 가이드 (1번: 기본 시나리오 태워보기)
 
+## 다 테스트 해보는 법 (요약)
+
+| 단계 | 무엇을 | 명령 |
+|------|--------|------|
+| **A. 단위·통합 테스트** | 모든 서비스 테스트 코드 실행 | `./gradlew test` |
+| **B. 로컬 전체 E2E (직접)** | 5개 서비스 + RabbitMQ bootRun 후 E2E | 아래 "B" 참고 |
+| **C. Gateway + E2E 일괄** | api-gateway까지 띄우고 8개 시나리오 일괄 | 아래 "C" 참고 |
+| **D. Docker Compose** | 컨테이너로 전체 스택 + E2E | `docker-compose up -d` 후 "C"의 E2E |
+| **E. Helm/K8s** | 클러스터에 배포 후 E2E | `./scripts/helm-deploy.sh` 후 출력 안내대로 |
+
+**B. 로컬 전체 E2E (직접)**  
+1) 터미널 5개: user(8081), product(8082), payment(8084), order(8083), settlement(8085) 각각 `./gradlew :xxx-service:bootRun`  
+2) RabbitMQ: `docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management`  
+3) `./scripts/e2e-flow.sh` → 이후 원하면 `./scripts/e2e-auth-scenarios.sh` 등 개별 시나리오
+
+**C. Gateway + E2E 일괄 (429 없이)**  
+1) B처럼 5개 서비스 + RabbitMQ 기동  
+2) api-gateway: `RATE_LIMIT_PER_MINUTE=0 ./gradlew :api-gateway:bootRun`  
+3) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh` → 8개 시나리오 일괄
+
+**E. Helm/K8s**  
+1) `./scripts/helm-deploy.sh` (또는 `--values helm/msa-shop/values-ghcr.yaml`)  
+2) `kubectl get pods -n default -w` 로 Pod 준비 대기  
+3) `kubectl port-forward svc/msa-shop-api-gateway 8080:8080` (별도 터미널 유지)  
+4) `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh`
+
+---
+
 ## 사전 준비
 
 - Java 21
@@ -36,8 +64,9 @@ gradle wrapper
 | 4      | `./gradlew :order-service:bootRun`                                          | 8083                     |
 | 5      | `./gradlew :settlement-service:bootRun`                                     | 8085 (선택, 매출 집계용) |
 | (선택) | RabbitMQ: `docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:3-management` | 5672, 15672              |
+| (선택) | Redis: `docker run -d -p 6379:6379 redis:7-alpine` (product-service 캐시) | 6379                      |
 
-기동 순서는 무관. **order-service**는 product / payment 에 연결. **payment-service**는 결제 완료 시 **RabbitMQ**로 이벤트 발행. settlement-service를 쓸 경우 RabbitMQ를 먼저 띄우고 payment·settlement를 기동해야 한다. RabbitMQ 미기동 시 발행 실패 로그만 남고 결제는 성공 처리.
+기동 순서는 무관. **product-service**는 Redis 캐시 사용. 로컬 bootRun 시 Redis 없이 쓰려면 `SPRING_PROFILES_ACTIVE=local` 로 기동(Redis 자동구성 제외, 인메모리 캐시 사용). Docker Compose에는 Redis 포함. **order-service**는 product / payment 에 연결. **payment-service**는 결제 완료 시 **RabbitMQ**로 이벤트 발행. settlement-service를 쓸 경우 RabbitMQ를 먼저 띄우고 payment·settlement를 기동해야 한다. RabbitMQ 미기동 시 발행 실패 로그만 남고 결제는 성공 처리.
 
 ## 4. E2E 시나리오 실행
 

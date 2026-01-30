@@ -10,6 +10,26 @@ K8s 매니페스트(`k8s/`)를 Helm 차트로 패키지한 버전입니다.
 
 **기존에 `kubectl apply -f k8s/`로 배포한 적이 있으면** Secret·ConfigMap·Deployment 등 이름이 겹칩니다. Helm 설치 전에 기존 리소스를 삭제하세요 (아래 트러블슈팅).
 
+## 순서대로 배포하기
+
+프로젝트 루트에서 스크립트로 설치·업그레이드 후 안내를 따르면 됩니다.
+
+```bash
+# 최초 설치 (기본 values)
+./scripts/helm-deploy.sh
+
+# ghcr.io 이미지 사용 (values-ghcr.yaml의 owner를 본인 계정으로 수정 후)
+./scripts/helm-deploy.sh --values helm/msa-shop/values-ghcr.yaml
+
+# 프로덕션 values 사용
+./scripts/helm-deploy.sh --values helm/msa-shop/values-prod.yaml
+
+# 업그레이드
+./scripts/helm-deploy.sh --upgrade --values helm/msa-shop/values-ghcr.yaml
+```
+
+실행 후 출력되는 port-forward·E2E 검증 명령을 순서대로 진행하세요.
+
 ## 설치
 
 **방법 A) ghcr.io 이미지 사용** (GitHub Actions로 main 푸시 시 자동 빌드된 이미지):

@@ -23,8 +23,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * /orders/**, /users/me 요청 시 JWT 검증 후 X-User-Id 헤더로 downstream 전달.
+ * /orders/**, /users/me(, /settlements/** 옵션) 요청 시 JWT 검증 후 X-User-Id 헤더로 downstream 전달.
  * user-service와 동일한 app.jwt.secret 사용.
+ * app.settlements.auth-required=true 이면 /settlements/** 도 인증 필수.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
@@ -33,18 +34,24 @@ public class JwtAuthGlobalFilter implements GlobalFilter {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String HEADER_X_USER_ID = "X-User-Id";
 
-    private static final List<Pattern> AUTH_REQUIRED_PATHS = List.of(
-            Pattern.compile("^/orders/.*"),
-            Pattern.compile("^/users/me$")
-    );
-
+    private final List<Pattern> authRequiredPaths;
     private final SecretKey secretKey;
 
-    public JwtAuthGlobalFilter(@Value("${app.jwt.secret}") String secret) {
+    public JwtAuthGlobalFilter(
+            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.settlements.auth-required:false}") boolean settlementsAuthRequired
+    ) {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalArgumentException("app.jwt.secret must be at least 32 bytes");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        var list = new java.util.ArrayList<Pattern>();
+        list.add(Pattern.compile("^/orders/.*"));
+        list.add(Pattern.compile("^/users/me$"));
+        if (settlementsAuthRequired) {
+            list.add(Pattern.compile("^/settlements/.*"));
+        }
+        this.authRequiredPaths = List.copyOf(list);
     }
 
     @Override
@@ -74,7 +81,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter {
     }
 
     private boolean requiresAuth(String path) {
-        return AUTH_REQUIRED_PATHS.stream().anyMatch(p -> p.matcher(path).matches());
+        return authRequiredPaths.stream().anyMatch(p -> p.matcher(path).matches());
     }
 
     private Long parseUserId(String token) {

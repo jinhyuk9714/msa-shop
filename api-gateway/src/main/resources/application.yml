@@ -47,6 +47,9 @@ management:
 app:
   jwt:
     secret: ${APP_JWT_SECRET:msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256}
+  # 정산 API(/settlements/**) JWT 필수 여부. true면 인증 필요(관리자 전용 등).
+  settlements:
+    auth-required: ${SETTLEMENTS_AUTH_REQUIRED:false}
   # Rate Limit: IP당 분당 요청 수. 초과 시 429. 0이면 비활성화(E2E 권장).
   rate-limit:
     per-minute: ${RATE_LIMIT_PER_MINUTE:120}

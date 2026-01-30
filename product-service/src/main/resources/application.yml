@@ -19,6 +19,12 @@ spring:
       enabled: true
   application:
     name: product-service
+  cache:
+    type: redis
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 server:
   port: 8082

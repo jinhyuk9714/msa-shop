@@ -2,6 +2,7 @@ package com.msa.shop.product.api;
 
 import com.msa.shop.product.domain.Product;
 import com.msa.shop.product.domain.ProductRepository;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,9 +24,18 @@ record ReserveStockResponse(boolean success, String reason, int remainingStock) 
 public class InternalStockController {
 
     private final ProductRepository productRepository;
+    private final CacheManager cacheManager;
 
-    public InternalStockController(ProductRepository productRepository) {
+    public InternalStockController(ProductRepository productRepository, CacheManager cacheManager) {
         this.productRepository = productRepository;
+        this.cacheManager = cacheManager;
+    }
+
+    private void evictProductCache(Long productId) {
+        var productsCache = cacheManager.getCache("products");
+        if (productsCache != null) productsCache.clear();
+        var productCache = cacheManager.getCache("product");
+        if (productCache != null) productCache.evict(productId);
     }
 
     @PostMapping("/internal/stocks/reserve")
@@ -41,6 +51,7 @@ public class InternalStockController {
         }
         product.decreaseStock(request.quantity());
         productRepository.save(product);
+        evictProductCache(product.getId());
 
         return ResponseEntity.ok(
                 new ReserveStockResponse(true, "성공", product.getStockQuantity())
@@ -59,6 +70,7 @@ public class InternalStockController {
 
         product.increaseStock(request.quantity());
         productRepository.save(product);
+        evictProductCache(product.getId());
 
         return ResponseEntity.ok(
                 new ReserveStockResponse(true, "해제", product.getStockQuantity())

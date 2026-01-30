@@ -59,6 +59,7 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 | [docs/PROFILES-AND-SECRETS.md](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리 |
 | [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) | 다음 단계 가이드(리소스·HPA·기능 확장) |
 | [docs/CI-IMAGES.md](docs/CI-IMAGES.md) | CI 이미지 빌드(ghcr.io)·Helm 배포 |
+| [docs/ARGOCD.md](docs/ARGOCD.md) | Argo CD 연동(Git push → Helm 자동 동기화) |
 | [docs/K8S-EXPANSION.md](docs/K8S-EXPANSION.md) | K8s 확장 계획·ConfigMap·Secret |
 | [k8s/README.md](k8s/README.md) | Kubernetes 매니페스트 배포 순서 |
 | [helm/README.md](helm/README.md) | Helm 차트 설치·리소스·HPA |
@@ -75,6 +76,7 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 
 ## 테스트·배포
 
+- **다 테스트 해보기**: [docs/RUN-LOCAL.md](docs/RUN-LOCAL.md) 상단 "다 테스트 해보는 법" 참고 (단위 테스트 → 로컬 E2E → Gateway 일괄 → Docker → Helm).
 - **단위·통합 테스트**: `./gradlew test`. order/product/user/payment 서비스 통합 테스트는 Testcontainers(MySQL·RabbitMQ·MockWebServer) 사용(Docker 필요).
 - **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 - **K8s**: [k8s/README.md](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서. 배포 후 port-forward + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.

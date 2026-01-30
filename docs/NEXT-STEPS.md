@@ -76,7 +76,7 @@
 | 장바구니 서비스 | 별도 서비스 또는 order-service 확장 |
 | 상품 카테고리 | product-service에 카테고리 필드/테이블 추가 |
 | ~~상품 검색~~ | ✅ `GET /products?name=...&minPrice=...&maxPrice=...` (이름 부분 일치, 가격 범위) |
-| 정산 API Gateway 노출 | `/settlements/**` JWT 검증 여부 정책화 (현재 인증 없음) |
+| ~~정산 API Gateway 노출~~ | ✅ `app.settlements.auth-required`(기본 false). true면 `/settlements/**` JWT 필수. Helm: `apiGateway.settlementsAuthRequired` |
 
 ---
 
@@ -85,7 +85,7 @@
 | 항목 | 설명 |
 |------|------|
 | HPA | ✅ order-service CPU 기반 (Helm 기본) |
-| Redis 캐시 | 상품 목록·재고 등 캐싱 (미구현) |
+| ~~Redis 캐시~~ | ✅ product-service 상품 목록·단건 조회 Redis 캐시. 재고 변경 시 evict. Docker/Helm Redis 포함. 로컬: profile local 시 Redis 제외 |
 | Rate Limiting | ✅ API Gateway 인메모리 Rate Limit (IP당 분당 120회, 429 초과 시). `app.rate-limit.per-minute`, `/actuator/health` 제외 |
 | DB 커넥션 풀 | HikariCP 설정 조정 (미구현) |
 
@@ -93,7 +93,7 @@
 
 ## 빠르게 시도해볼 수 있는 것
 
-- **Argo CD 설치·연동**: Git push 시 자동 K8s 배포
+- **Argo CD 설치·연동**: ✅ `argocd/application.yaml` 추가. Git push 시 Helm 차트 자동 동기화. [docs/ARGOCD.md](ARGOCD.md)
 - **HPA**: Helm 기본값으로 order-service HPA 활성화됨. 비활성화 시 `--set orderService.hpa.enabled=false`. [`helm/README.md`](../helm/README.md) 참고.
 - **values-prod.yaml 작성**: 운영용 values 파일 예시
 
