@@ -14,12 +14,12 @@ spring:
   h2:
     console:
       enabled: true
-  # 결제 완료 이벤트 발행. RabbitMQ topic "payment.events" → settlement-service가 구독
+  # 결제 완료 이벤트 발행. RabbitMQ. prod에서는 SPRING_RABBITMQ_* env로 오버라이드.
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
   application:
     name: payment-service
 

@@ -36,15 +36,15 @@ management:
       endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 product-service:
-  base-url: http://localhost:8082
+  base-url: ${PRODUCT_SERVICE_BASE_URL:http://localhost:8082}
 
 payment-service:
-  base-url: http://localhost:8084
+  base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8084}
 
-# JWT: user-service와 동일한 secret 사용. Bearer JWT 검증·userId 추출.
+# JWT: user-service와 동일한 secret. prod에서는 APP_JWT_SECRET으로 오버라이드.
 app:
   jwt:
-    secret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    secret: ${APP_JWT_SECRET:msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256}
   outbox:
     process-interval: 5000
 

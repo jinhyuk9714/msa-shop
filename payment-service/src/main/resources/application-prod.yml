@@ -1,0 +1,15 @@
+# prod: H2 비활성, 로그 축소, RabbitMQ는 env 필수.
+spring:
+  h2:
+    console:
+      enabled: false
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST}
+    port: ${SPRING_RABBITMQ_PORT}
+    username: ${SPRING_RABBITMQ_USERNAME}
+    password: ${SPRING_RABBITMQ_PASSWORD}
+
+logging:
+  level:
+    root: WARN
+    com.msa: INFO

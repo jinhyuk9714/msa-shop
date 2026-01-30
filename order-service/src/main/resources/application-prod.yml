@@ -1,0 +1,20 @@
+# prod: H2 비활성, 로그 축소, JWT·base-url은 env 필수.
+spring:
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.msa: INFO
+
+product-service:
+  base-url: ${PRODUCT_SERVICE_BASE_URL}
+
+payment-service:
+  base-url: ${PAYMENT_SERVICE_BASE_URL}
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}

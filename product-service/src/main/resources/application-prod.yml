@@ -1,0 +1,10 @@
+# prod: H2 비활성, 로그 축소.
+spring:
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.msa: INFO

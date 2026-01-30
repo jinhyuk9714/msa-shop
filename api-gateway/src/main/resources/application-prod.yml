@@ -1,0 +1,9 @@
+# prod: 로그 축소, JWT 시크릿은 APP_JWT_SECRET env 필수.
+logging:
+  level:
+    root: WARN
+    com.msa: INFO
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}

@@ -37,7 +37,7 @@ management:
     tracing:
       endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
-# JWT 검증 (user-service와 동일 secret). 인증 필요 경로에서 X-User-Id 추가.
+# JWT 검증 (user-service와 동일 secret). prod에서는 APP_JWT_SECRET env 필수.
 app:
   jwt:
-    secret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    secret: ${APP_JWT_SECRET:msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256}

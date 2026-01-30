@@ -11,6 +11,7 @@
 - **이벤트 드리븐(RabbitMQ)**: payment-service 결제 승인 후 Topic `payment.events`(routing key `payment.completed`) 발행. settlement-service `PaymentCompletedListener` 구독. HTTP 정산 호출 제거.
 - **order-service 예외 보강**: payment/product 연결 실패·5xx 시 502 BAD_GATEWAY + 메시지(OrderControllerAdvice).
 - **E2E**: `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` (Gateway 경유), `./scripts/e2e-flow.sh` (직접). GET /orders/{id}에 Authorization 헤더 포함.
+- **프로파일·시크릿**: `default`(로컬 bootRun) / `prod`(Docker·K8s). `application-prod.yml`에서 H2 비활성·로그 축소·JWT·DB·RabbitMQ 등 env 필수. 상세는 [`docs/PROFILES-AND-SECRETS.md`](PROFILES-AND-SECRETS.md).
 
 ---
 

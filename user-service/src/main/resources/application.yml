@@ -29,8 +29,8 @@ management:
     health:
       show-details: when_authorized
 
-# JWT (HS256). secret은 32자 이상 권장. order-service와 동일 값 사용.
+# JWT (HS256). secret은 32자 이상 권장. order-service·api-gateway와 동일 값. prod에서는 APP_JWT_SECRET으로 오버라이드.
 app:
   jwt:
-    secret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+    secret: ${APP_JWT_SECRET:msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256}
     expiration-ms: 3600000

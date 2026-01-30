@@ -22,6 +22,8 @@ spec:
           ports:
             - containerPort: 8085
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql:3306/settlementdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul"
             - name: SPRING_DATASOURCE_USERNAME
