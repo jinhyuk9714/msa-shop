@@ -1,0 +1,93 @@
+# payment-service (8084). DB + RabbitMQ.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-payment-service
+  labels:
+    app: payment-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.paymentService.replicas }}
+  selector:
+    matchLabels:
+      app: payment-service
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: payment-service
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: payment-service
+          image: "{{ .Values.paymentService.image.repository }}:{{ .Values.paymentService.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://{{ include "msa-shop.mysqlHost" . }}:3306/paymentdb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "msa-shop.secretName" . }}
+                  key: mysql-root-password
+            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: "com.mysql.cj.jdbc.Driver"
+            - name: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
+              value: "60000"
+            - name: SPRING_RABBITMQ_HOST
+              value: {{ include "msa-shop.rabbitmqHost" . }}
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "msa-shop.secretName" . }}
+                  key: rabbitmq-username
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "msa-shop.secretName" . }}
+                  key: rabbitmq-password
+            {{- if .Values.observability.enabled }}
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: {{ include "msa-shop.zipkinUrl" . }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 90
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-payment-service
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: payment-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - port: 8084
+      targetPort: 8084
+  type: ClusterIP

@@ -3,13 +3,17 @@ package com.msa.shop.settlement.api;
 import com.msa.shop.settlement.application.SettlementService;
 import com.msa.shop.settlement.domain.DailySettlement;
 import com.msa.shop.settlement.domain.MonthlySettlement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 
 /** 일별 집계 응답 DTO. */
 record DailySettlementResponse(LocalDate settlementDate, long totalAmount, int paymentCount) {
@@ -36,6 +40,8 @@ record MonthlySettlementResponse(YearMonth yearMonth, long totalAmount, int paym
 @RestController
 public class SettlementController {
 
+    private static final Logger log = LoggerFactory.getLogger(SettlementController.class);
+
     private final SettlementService settlementService;
 
     public SettlementController(SettlementService settlementService) {
@@ -44,20 +50,34 @@ public class SettlementController {
 
     /**
      * 특정 일자 매출 집계 조회. ?date=yyyy-MM-dd 없으면 최근 일별 목록(최대 30).
+     * date는 문자열로 받아 수동 파싱해 Gateway 경유 시 변환 예외로 500 나는 것을 방지.
      */
     @GetMapping("/settlements/daily")
     public ResponseEntity<?> getDaily(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(required = false) String date
     ) {
-        if (date == null) {
-            List<DailySettlement> list = settlementService.getRecentDailySettlements(30);
-            return ResponseEntity.ok(list.stream().map(DailySettlementResponse::from).toList());
+        try {
+            if (date == null || date.isBlank()) {
+                List<DailySettlement> list = settlementService.getRecentDailySettlements(30);
+                return ResponseEntity.ok(list.stream().map(DailySettlementResponse::from).toList());
+            }
+            LocalDate parsed;
+            try {
+                parsed = LocalDate.parse(date);
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.badRequest().body(
+                        Map.of("error", "BAD_REQUEST", "message", "date must be yyyy-MM-dd"));
+            }
+            DailySettlement daily = settlementService.getDailySettlement(parsed);
+            if (daily == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(DailySettlementResponse.from(daily));
+        } catch (Exception e) {
+            log.warn("GET /settlements/daily failed, date={}", date, e);
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Internal Server Error", "message", e.getMessage()));
         }
-        DailySettlement daily = settlementService.getDailySettlement(date);
-        if (daily == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(DailySettlementResponse.from(daily));
     }
 
     /**

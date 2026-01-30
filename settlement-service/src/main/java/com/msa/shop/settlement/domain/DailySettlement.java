@@ -9,14 +9,15 @@ import java.time.LocalDate;
  * - payment-service에서 "결제 완료" 이벤트를 받을 때마다 해당 일자의 집계를 갱신.
  */
 @Entity
-@Table(name = "daily_settlements", uniqueConstraints = @UniqueConstraint(columnNames = "settlementDate"))
+@Table(name = "daily_settlements", uniqueConstraints = @UniqueConstraint(columnNames = "report_date"))
 public class DailySettlement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    /** MySQL 예약어(date) 충돌 회피를 위해 report_date 사용 */
+    @Column(name = "report_date", nullable = false, unique = true)
     private LocalDate settlementDate;
 
     @Column(nullable = false)

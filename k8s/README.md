@@ -1,6 +1,7 @@
 # Kubernetes 배포
 
-> 전체 스택(MySQL, RabbitMQ, 6개 앱, Ingress) 매니페스트. 적용 순서대로 배포하면 Docker Compose와 동일한 구성으로 동작합니다.
+> 전체 스택(MySQL, RabbitMQ, 6개 앱, Ingress) 매니페스트. 적용 순서대로 배포하면 Docker Compose와 동일한 구성으로 동작합니다.  
+> **Helm 사용**: 동일 스택을 Helm으로 설치하려면 [`helm/README.md`](../helm/README.md) 참고.
 
 ## 전제
 

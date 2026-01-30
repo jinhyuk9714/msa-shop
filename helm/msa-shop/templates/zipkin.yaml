@@ -1,0 +1,46 @@
+{{- if .Values.observability.enabled }}
+# Zipkin: 분산 추적
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-zipkin
+  labels:
+    app: zipkin
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: zipkin
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: zipkin
+          image: {{ .Values.observability.zipkin.image }}
+          ports:
+            - containerPort: 9411
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-zipkin
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: zipkin
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - port: 9411
+      targetPort: 9411
+  type: ClusterIP
+{{- end }}

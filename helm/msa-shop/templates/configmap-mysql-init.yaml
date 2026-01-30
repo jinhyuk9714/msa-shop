@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-mysql-init
+  labels:
+    app.kubernetes.io/name: msa-shop
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  01-create-databases.sql: |
+    CREATE DATABASE IF NOT EXISTS userdb;
+    CREATE DATABASE IF NOT EXISTS productdb;
+    CREATE DATABASE IF NOT EXISTS orderdb;
+    CREATE DATABASE IF NOT EXISTS paymentdb;
+    CREATE DATABASE IF NOT EXISTS settlementdb;

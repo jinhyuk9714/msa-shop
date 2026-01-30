@@ -18,6 +18,10 @@ spring:
           uri: ${ORDER_SERVICE_URI:http://localhost:8083}
           predicates:
             - Path=/orders/**
+        - id: settlement-service
+          uri: ${SETTLEMENT_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/settlements/**
   application:
     name: api-gateway
 

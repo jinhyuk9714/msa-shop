@@ -1,24 +1,27 @@
-# api-gateway (8080). 라우팅·JWT 검증·X-User-Id. Ingress가 여기로 전달.
+# api-gateway (8080). 라우팅·JWT 검증. Ingress가 여기로 전달.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway
+  name: {{ .Release.Name }}-api-gateway
   labels:
     app: api-gateway
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.apiGateway.replicas }}
   selector:
     matchLabels:
       app: api-gateway
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: api-gateway
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
         - name: api-gateway
-          image: msa-shop-api-gateway:latest
-          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:
             - containerPort: 8080
           env:
@@ -27,17 +30,21 @@ spec:
             - name: SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED
               value: "false"
             - name: USER_SERVICE_URI
-              value: "http://user-service:8081"
+              value: "http://{{ .Release.Name }}-user-service:8081"
             - name: PRODUCT_SERVICE_URI
-              value: "http://product-service:8082"
+              value: "http://{{ .Release.Name }}-product-service:8082"
             - name: ORDER_SERVICE_URI
-              value: "http://order-service:8083"
+              value: "http://{{ .Release.Name }}-order-service:8083"
             - name: SETTLEMENT_SERVICE_URI
-              value: "http://settlement-service:8085"
+              value: "http://{{ .Release.Name }}-settlement-service:8085"
+            {{- if .Values.observability.enabled }}
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: {{ include "msa-shop.zipkinUrl" . }}
+            {{- end }}
             - name: APP_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: msa-shop-secrets
+                  name: {{ include "msa-shop.secretName" . }}
                   key: jwt-secret
           readinessProbe:
             httpGet:
@@ -55,10 +62,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-gateway
+  name: {{ .Release.Name }}-api-gateway
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   selector:
     app: api-gateway
+    app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - port: 8080
       targetPort: 8080

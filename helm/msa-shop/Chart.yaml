@@ -1,0 +1,12 @@
+apiVersion: v2
+name: msa-shop
+description: MSA Shop - User, Product, Order, Payment, Settlement, API Gateway
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"
+keywords:
+  - msa
+  - spring-boot
+  - microservices
+maintainers:
+  - name: msa-shop

@@ -9,14 +9,14 @@ import java.time.YearMonth;
  * yearMonth는 YearMonthAttributeConverter로 DB에 "yyyy-MM" 문자열 저장.
  */
 @Entity
-@Table(name = "monthly_settlements", uniqueConstraints = @UniqueConstraint(columnNames = "yearMonth"))
+@Table(name = "monthly_settlements", uniqueConstraints = @UniqueConstraint(columnNames = "settlement_year_month"))
 public class MonthlySettlement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "settlement_year_month", nullable = false, unique = true)
     private YearMonth yearMonth;
 
     @Column(nullable = false)

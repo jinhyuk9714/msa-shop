@@ -12,6 +12,7 @@
 - **order-service 예외 보강**: payment/product 연결 실패·5xx 시 502 BAD_GATEWAY + 메시지(OrderControllerAdvice).
 - **E2E**: `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` (Gateway 경유), `./scripts/e2e-flow.sh` (직접). GET /orders/{id}에 Authorization 헤더 포함.
 - **프로파일·시크릿**: `default`(로컬 bootRun) / `prod`(Docker·K8s). `application-prod.yml`에서 H2 비활성·로그 축소·JWT·DB·RabbitMQ 등 env 필수. 상세는 [`docs/PROFILES-AND-SECRETS.md`](PROFILES-AND-SECRETS.md).
+- **K8s·Helm**: `k8s/` 매니페스트로 전체 스택 배포. `helm/` 차트로 동일 스택 설치·업그레이드·다중 설치(릴리스별 접두사). [`k8s/README.md`](../k8s/README.md), [`helm/README.md`](../helm/README.md).
 
 ---
 

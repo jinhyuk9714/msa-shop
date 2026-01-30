@@ -7,13 +7,13 @@ if [ -n "$GATEWAY_URL" ]; then
   USER_URL="$GATEWAY_URL"
   PRODUCT_URL="$GATEWAY_URL"
   ORDER_URL="$GATEWAY_URL"
+  SETTLEMENT_URL="${SETTLEMENT_URL:-$GATEWAY_URL}"
 else
   USER_URL="${USER_URL:-http://localhost:8081}"
   PRODUCT_URL="${PRODUCT_URL:-http://localhost:8082}"
   ORDER_URL="${ORDER_URL:-http://localhost:8083}"
+  SETTLEMENT_URL="${SETTLEMENT_URL:-http://localhost:8085}"
 fi
-# settlement-service는 Gateway 경로 없음. 직접 8085 사용.
-SETTLEMENT_URL="${SETTLEMENT_URL:-http://localhost:8085}"
 
 # 서비스 준비 대기 (Docker Compose 직후 Spring Boot 기동 시간 확보)
 wait_for_ready() {

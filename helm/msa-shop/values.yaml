@@ -1,0 +1,72 @@
+# 기본값. 로컬 테스트·단일 설치용. 운영 시 -f values-prod.yaml 또는 --set 로 오버라이드.
+# 이미지: 로컬 빌드 시 msa-shop-*:latest, 레지스트리 사용 시 your-registry/msa-shop-*:tag
+global:
+  imagePullPolicy: IfNotPresent
+
+secrets:
+  mysqlRootPassword: "root"
+  jwtSecret: "msa-shop-jwt-secret-key-at-least-32-bytes-long-for-hs256"
+  rabbitmqUsername: "guest"
+  rabbitmqPassword: "guest"
+
+mysql:
+  image: mysql:8
+  persistence:
+    size: 1Gi
+
+rabbitmq:
+  image: rabbitmq:3-management
+
+apiGateway:
+  replicas: 1
+  image:
+    repository: msa-shop-api-gateway
+    tag: latest
+
+userService:
+  replicas: 1
+  image:
+    repository: msa-shop-user-service
+    tag: latest
+
+productService:
+  replicas: 1
+  image:
+    repository: msa-shop-product-service
+    tag: latest
+
+orderService:
+  replicas: 1
+  image:
+    repository: msa-shop-order-service
+    tag: latest
+
+paymentService:
+  replicas: 1
+  image:
+    repository: msa-shop-payment-service
+    tag: latest
+
+settlementService:
+  replicas: 1
+  image:
+    repository: msa-shop-settlement-service
+    tag: latest
+
+ingress:
+  enabled: true
+  className: nginx
+  # host: msa-shop.local  # 운영 시 설정
+
+# 관측성 (Prometheus, Grafana, Zipkin). 비활성화: observability.enabled: false
+observability:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:latest
+    retention: 15d
+  grafana:
+    image: grafana/grafana:latest
+    adminUser: admin
+    adminPassword: admin
+  zipkin:
+    image: openzipkin/zipkin:latest
