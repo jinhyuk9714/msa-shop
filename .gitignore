@@ -2,6 +2,9 @@
 .gradle/
 build/
 
+# Spring Boot bootRun (IDE/Gradle)
+**/bin/
+
 # IDE
 .idea/
 *.iml

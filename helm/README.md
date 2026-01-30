@@ -32,6 +32,15 @@ helm install msa-shop ./helm/msa-shop
 helm install msa-shop ./helm/msa-shop -n shop --create-namespace
 ```
 
+**방법 C) 프로덕션용 values** (이미지 태그·리소스·Ingress 호스트·시크릿 주입 안내):
+
+```bash
+# values-prod.yaml 에서 your-registry, tag, host, 비밀값 등을 실제 값으로 수정 후
+helm install msa-shop ./helm/msa-shop -f helm/msa-shop/values.yaml -f helm/msa-shop/values-prod.yaml
+```
+
+비공개 레지스트리 사용 시 `values-prod.yaml`에서 `global.imagePullSecrets`를 설정하고, `kubectl create secret docker-registry regcred ...` 로 시크릿을 미리 생성합니다.
+
 ## 설치 후 할 일
 
 **1) Pod 상태 확인**  

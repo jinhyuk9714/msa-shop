@@ -94,6 +94,63 @@ curl -s -X POST http://localhost:8083/orders \
   -d '{"productId":3,"quantity":10,"paymentMethod":"CARD"}'
 ```
 
+**전체 실패 시나리오 스크립트** (재고 부족 409, 주문 취소 성공·재취소 409):
+
+```bash
+./scripts/e2e-failure-scenarios.sh
+# Gateway 경유: GATEWAY_URL=http://localhost:8080 ./scripts/e2e-failure-scenarios.sh
+```
+
+## 5-1. E2E 시나리오 전체 목록
+
+| 스크립트 | 내용 |
+|----------|------|
+| `e2e-flow.sh` | 기본 흐름: 상품 목록 → 회원가입 → 로그인 → 주문 생성 → 주문 조회 → 당일 정산 |
+| `e2e-auth-scenarios.sh` | 인증: 회원가입 중복 409, 로그인 실패 401, JWT 없음 401, 유효 JWT 200 |
+| `e2e-order-scenarios.sh` | 주문: 생성 201 → 단건 조회 200 → 내 주문 목록 200 |
+| `e2e-failure-scenarios.sh` | 실패: 재고 부족 409, 주문 취소 성공, 이미 취소 재취소 409 |
+| `e2e-not-found-scenarios.sh` | 404: 없는 주문 조회 404, 없는 상품 조회 (404/500) |
+| `e2e-product-search.sh` | 상품 검색: name, minPrice, maxPrice, 빈 결과 0건 |
+| `e2e-settlement-scenarios.sh` | 정산: 일별/월별 목록, 특정 일자·월, 잘못된 형식 |
+| `e2e-rate-limit.sh` | Rate Limit: 130회 요청 → 429 발생 (Gateway만, GATEWAY_URL 필요) |
+| **e2e-all-scenarios.sh** | 위 1~7(+8) 시나리오 일괄 실행 |
+
+**일괄 실행** (사전에 `e2e-flow.sh` 한 번 실행 권장 — 회원 생성):
+
+```bash
+# Gateway 경유 (K8s 시 port-forward 후)
+GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh
+
+# 직접 호출
+./scripts/e2e-all-scenarios.sh
+```
+
+**429(Too Many Requests) 방지**: Gateway 경유로 일괄 E2E를 돌릴 때 Rate Limit에 걸리지 않으려면, api-gateway 기동 시 아래 중 하나를 적용하세요.
+
+- **환경 변수**: `RATE_LIMIT_PER_MINUTE=0` (0 = 비활성화)
+- **프로필**: `SPRING_PROFILES_ACTIVE=e2e` (application-e2e.yml에서 per-minute: 0 적용)
+
+예: `RATE_LIMIT_PER_MINUTE=0 ./gradlew :api-gateway:bootRun` 후 `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-all-scenarios.sh` 실행.
+
+## 5-2. 상품 검색·Rate Limit E2E (선택)
+
+**상품 검색** (`GET /products?name=...&minPrice=...&maxPrice=...`):
+
+```bash
+# product-service 직접 (8082) 또는 Gateway(8080)
+./scripts/e2e-product-search.sh
+# GATEWAY_URL=http://localhost:8080 ./scripts/e2e-product-search.sh
+```
+
+**API Gateway Rate Limit** (IP당 분당 120회 초과 시 429). Gateway가 떠 있어야 함:
+
+```bash
+# 130회 연속 요청 → 제한(120) 초과 시 429 확인
+GATEWAY_URL=http://localhost:8080 ./scripts/e2e-rate-limit.sh
+# 빠른 확인: api-gateway에 RATE_LIMIT_PER_MINUTE=10 설정 후
+# RATE_LIMIT_TEST_REQUESTS=15 GATEWAY_URL=http://localhost:8080 ./scripts/e2e-rate-limit.sh
+```
+
 ## 6. Docker Compose로 API Gateway + 5서비스 + MySQL 기동 (선택)
 
 Docker·Docker Compose가 설치돼 있다면, **MySQL 8**과 다섯 서비스를 한 번에 띄울 수 있다.

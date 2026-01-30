@@ -55,19 +55,14 @@
 
 ---
 
-### 4. 프로덕션 준비
+### 4. 프로덕션 준비 ✅ 일부 완료
 
 **목표:** 운영 환경에 맞게 보안·설정 보강
 
-- **시크릿 관리**
-  - Sealed Secrets, External Secrets Operator, Vault 등
-  - `values-prod.yaml` 예시 및 문서화
-- **이미지**
-  - 레지스트리 URL·태그 전략 정리
-  - `imagePullSecrets` 설정
-- **리소스**
-  - Deployment에 `resources.requests`/`limits` 설정 ✅ Helm 차트에 반영 (`defaultResources`, 서비스별 오버라이드 가능)
-  - HPA(Horizontal Pod Autoscaler) ✅ order-service HPA 기본 활성화 (min 1, max 3, CPU 70%). `helm/README.md` 참고.
+- **시크릿 관리**: Sealed Secrets, External Secrets Operator, Vault 등 (운영 시 도입 권장)
+- **values-prod.yaml** ✅ 예시 추가. 이미지·태그·리소스·Ingress 호스트·imagePullSecrets 안내. `helm install ... -f values.yaml -f values-prod.yaml`
+- **이미지**: 레지스트리·태그 전략 ✅ values-prod 예시. **imagePullSecrets** ✅ Helm 템플릿·values-prod 주석
+- **리소스** ✅ Helm 차트 반영. **HPA** ✅ order-service 기본 활성화. `helm/README.md` 참고.
 
 ---
 
@@ -80,7 +75,7 @@
 | ~~주문 취소 API~~ | ✅ `PATCH /orders/{id}/cancel` — PAID 주문 취소 (결제 취소 + 재고 복구) |
 | 장바구니 서비스 | 별도 서비스 또는 order-service 확장 |
 | 상품 카테고리 | product-service에 카테고리 필드/테이블 추가 |
-| 상품 검색 | 이름/가격 조건 검색 API |
+| ~~상품 검색~~ | ✅ `GET /products?name=...&minPrice=...&maxPrice=...` (이름 부분 일치, 가격 범위) |
 | 정산 API Gateway 노출 | `/settlements/**` JWT 검증 여부 정책화 (현재 인증 없음) |
 
 ---
@@ -89,10 +84,10 @@
 
 | 항목 | 설명 |
 |------|------|
-| HPA | CPU/메모리 기반 Pod 자동 스케일링 |
-| Redis 캐시 | 상품 목록·재고 등 캐싱 |
-| Rate Limiting | API Gateway에 요청 제한 |
-| DB 커넥션 풀 | HikariCP 설정 조정 |
+| HPA | ✅ order-service CPU 기반 (Helm 기본) |
+| Redis 캐시 | 상품 목록·재고 등 캐싱 (미구현) |
+| Rate Limiting | ✅ API Gateway 인메모리 Rate Limit (IP당 분당 120회, 429 초과 시). `app.rate-limit.per-minute`, `/actuator/health` 제외 |
+| DB 커넥션 풀 | HikariCP 설정 조정 (미구현) |
 
 ---
 

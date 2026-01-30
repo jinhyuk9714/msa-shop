@@ -18,6 +18,10 @@ spec:
         app: order-service
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.global.imagePullSecrets }}
+      {{- end }}
       containers:
         - name: order-service
           image: "{{ .Values.orderService.image.repository }}:{{ .Values.orderService.image.tag }}"

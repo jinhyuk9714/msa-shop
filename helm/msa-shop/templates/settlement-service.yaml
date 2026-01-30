@@ -18,6 +18,10 @@ spec:
         app: settlement-service
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.global.imagePullSecrets }}
+      {{- end }}
       containers:
         - name: settlement-service
           image: "{{ .Values.settlementService.image.repository }}:{{ .Values.settlementService.image.tag }}"

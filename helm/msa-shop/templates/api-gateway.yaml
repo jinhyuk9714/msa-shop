@@ -18,6 +18,10 @@ spec:
         app: api-gateway
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.global.imagePullSecrets }}
+      {{- end }}
       containers:
         - name: api-gateway
           image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}"

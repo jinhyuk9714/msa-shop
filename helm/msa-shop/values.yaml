@@ -2,6 +2,8 @@
 # 이미지: 로컬 빌드 시 msa-shop-*:latest, 레지스트리 사용 시 your-registry/msa-shop-*:tag
 global:
   imagePullPolicy: IfNotPresent
+  # 비공개 레지스트리 사용 시 시크릿 이름 (values-prod 등에서 설정)
+  # imagePullSecrets: regcred
 # 앱 공통 리소스 기본값. 서비스별로 오버라이드 가능.
 defaultResources:
   requests:

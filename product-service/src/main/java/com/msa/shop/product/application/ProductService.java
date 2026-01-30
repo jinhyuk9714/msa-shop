@@ -25,6 +25,14 @@ public class ProductService {
         return productRepository.findAll();
     }
 
+    /**
+     * 상품 검색. name(부분 일치, 대소문자 무시), minPrice, maxPrice 중 null이 아닌 값만 조건 적용.
+     */
+    @Transactional(readOnly = true)
+    public List<Product> searchProducts(String name, Integer minPrice, Integer maxPrice) {
+        return productRepository.search(name, minPrice, maxPrice);
+    }
+
     @Transactional(readOnly = true)
     public Product getProduct(Long id) {
         return productRepository.findById(id)

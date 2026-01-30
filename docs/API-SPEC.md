@@ -48,7 +48,7 @@
 
 | 메서드 | 경로                       | 설명            | 인증 |
 | ------ | -------------------------- | --------------- | ---- |
-| GET    | `/products`                | 상품 목록       | X    |
+| GET    | `/products`                | 상품 목록·검색  | X    |
 | GET    | `/products/{id}`           | 상품 상세       | X    |
 | POST   | `/internal/stocks/reserve` | 재고 예약(내부) | X    |
 | POST   | `/internal/stocks/release` | 재고 복구(보상) | X    |
@@ -56,6 +56,7 @@
 ### 요청/응답
 
 - **GET /products**  
+  Query(선택): `name`(상품명 부분 일치), `minPrice`, `maxPrice`(가격 범위). 없으면 전체 목록.  
   Response 200: `[{ "id", "name", "price", "stockQuantity" }, ...]`
 
 - **GET /products/{id}**  

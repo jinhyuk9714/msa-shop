@@ -18,6 +18,10 @@ spec:
         app: payment-service
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.global.imagePullSecrets }}
+      {{- end }}
       containers:
         - name: payment-service
           image: "{{ .Values.paymentService.image.repository }}:{{ .Values.paymentService.image.tag }}"

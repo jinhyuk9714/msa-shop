@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * user-service와 동일한 app.jwt.secret 사용.
  */
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class JwtAuthGlobalFilter implements GlobalFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";

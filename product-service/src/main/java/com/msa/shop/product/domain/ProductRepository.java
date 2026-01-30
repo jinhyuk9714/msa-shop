@@ -1,10 +1,19 @@
 package com.msa.shop.product.domain;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 /**
  * Product 엔티티용 DB 접근 계층.
- * - JpaRepository: CRUD + findAll, findById 등 제공. 커스텀 메서드 없이 기본만 사용.
+ * - JpaRepository: CRUD + findAll, findById 등 제공.
+ * - search: 이름(부분 일치), 최소/최대 가격 조건 검색 (null 파라미터는 조건에서 제외).
  */
 public interface ProductRepository extends JpaRepository<Product, Long> {
+
+    @Query("SELECT p FROM Product p WHERE (:name IS NULL OR :name = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) " +
+           "AND (:minPrice IS NULL OR p.price >= :minPrice) AND (:maxPrice IS NULL OR p.price <= :maxPrice)")
+    List<Product> search(@Param("name") String name, @Param("minPrice") Integer minPrice, @Param("maxPrice") Integer maxPrice);
 }

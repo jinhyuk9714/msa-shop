@@ -8,7 +8,7 @@
 
 | 문서 | 설명 |
 |------|------|
-| [RUN-LOCAL.md](RUN-LOCAL.md) | 로컬 실행(Gradle bootRun, Docker Compose), E2E 시나리오, 환경 변수 |
+| [RUN-LOCAL.md](RUN-LOCAL.md) | 로컬 실행(Gradle bootRun, Docker Compose), E2E 시나리오(일괄·429 방지), 환경 변수 |
 | [OPENAPI.md](OPENAPI.md) | Swagger UI 접근 방법(로컬/K8s), 테스트 순서, Authorize·트러블슈팅 |
 | [PROFILES-AND-SECRETS.md](PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod), 시크릿·환경 변수 관리 |
 

@@ -72,4 +72,54 @@ class ProductControllerIntegrationTest {
         assertThat(res.getBody().get("id")).isEqualTo(1);
         assertThat(res.getBody()).containsKeys("name", "price", "stockQuantity");
     }
+
+    @Test
+    @DisplayName("GET /products?name=상품 → 200, 이름 부분 일치 검색")
+    void getProductsByNameSearch() {
+        String base = "http://localhost:" + port;
+        ResponseEntity<List<Map<String, Object>>> res = restTemplate.exchange(
+                base + "/products?name=상품",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getBody()).allMatch(m -> ((String) m.get("name")).contains("상품"));
+    }
+
+    @Test
+    @DisplayName("GET /products?minPrice=5000&maxPrice=15000 → 200, 가격 범위 검색")
+    void getProductsByPriceRange() {
+        String base = "http://localhost:" + port;
+        ResponseEntity<List<Map<String, Object>>> res = restTemplate.exchange(
+                base + "/products?minPrice=5000&maxPrice=15000",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getBody()).allMatch(m -> {
+            int price = (Integer) m.get("price");
+            return price >= 5000 && price <= 15000;
+        });
+    }
+
+    @Test
+    @DisplayName("GET /products?name=없는상품 → 200, 빈 목록")
+    void getProductsByNameNoMatch() {
+        String base = "http://localhost:" + port;
+        ResponseEntity<List<Map<String, Object>>> res = restTemplate.exchange(
+                base + "/products?name=없는상품",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody()).isEmpty();
+    }
 }

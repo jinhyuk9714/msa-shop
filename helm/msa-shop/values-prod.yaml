@@ -1,0 +1,78 @@
+# 프로덕션용 values 예시. 실제 비밀값은 Sealed Secrets / External Secrets / Vault 등으로 주입 권장.
+# 사용: helm install msa-shop ./helm/msa-shop -f helm/msa-shop/values.yaml -f helm/msa-shop/values-prod.yaml
+
+global:
+  imagePullPolicy: Always
+  # 비공개 레지스트리 사용 시 시크릿 이름 (kubectl create secret docker-registry ... 로 생성)
+  # imagePullSecrets: regcred
+
+# 운영에서는 values에 비밀을 넣지 말고, 시크릿 관리 도구로 주입 후 아래는 주석 처리하거나 env에서 참조
+# secrets:
+#   mysqlRootPassword: "CHANGE_ME"
+#   jwtSecret: "CHANGE_ME_32_CHARS_MINIMUM"
+#   rabbitmqUsername: "admin"
+#   rabbitmqPassword: "CHANGE_ME"
+
+# 이미지: 레지스트리 + 태그 전략 (예: 릴리스 태그, latest 비권장)
+apiGateway:
+  image:
+    repository: your-registry/msa-shop-api-gateway
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "200m" }
+    limits:   { memory: "512Mi", cpu: "500m" }
+
+userService:
+  image:
+    repository: your-registry/msa-shop-user-service
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits:   { memory: "512Mi", cpu: "500m" }
+
+productService:
+  image:
+    repository: your-registry/msa-shop-product-service
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits:   { memory: "512Mi", cpu: "500m" }
+
+orderService:
+  image:
+    repository: your-registry/msa-shop-order-service
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "200m" }
+    limits:   { memory: "512Mi", cpu: "1000m" }
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+paymentService:
+  image:
+    repository: your-registry/msa-shop-payment-service
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits:   { memory: "512Mi", cpu: "500m" }
+
+settlementService:
+  image:
+    repository: your-registry/msa-shop-settlement-service
+    tag: "1.0.0"
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits:   { memory: "512Mi", cpu: "500m" }
+
+ingress:
+  enabled: true
+  className: nginx
+  host: msa-shop.example.com  # 운영 도메인으로 변경
+
+observability:
+  enabled: true
+  grafana:
+    adminPassword: "CHANGE_ME"  # 운영 시 강한 비밀번호
