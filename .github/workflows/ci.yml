@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start services
-        run: docker-compose up --build -d
+        run: docker compose up --build -d
 
       - name: Wait for services
         run: |
@@ -47,7 +47,7 @@ jobs:
             fi
             if [ $i -eq 90 ]; then
               echo "Timeout waiting for services (4.5 min)"
-              docker-compose logs --tail 50
+              docker compose logs --tail 50
               exit 1
             fi
             sleep 3
@@ -58,4 +58,4 @@ jobs:
 
       - name: Stop services
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
