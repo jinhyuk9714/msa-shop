@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 
+import org.springframework.dao.DataAccessException;
+
 import java.util.Map;
 
 /**
@@ -75,5 +77,34 @@ public class OrderControllerAdvice {
         return ResponseEntity
                 .status(HttpStatus.BAD_GATEWAY)
                 .body(Map.of("error", "BAD_GATEWAY", "message", message));
+    }
+
+    /** DB 등 데이터 접근 오류 → 503 (원인 로그) */
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, String>> handleDataAccess(DataAccessException ex) {
+        Logger log = LoggerFactory.getLogger(OrderControllerAdvice.class);
+        log.error("주문 처리 중 DB 오류", ex);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", "SERVICE_UNAVAILABLE", "message", ex.getMostSpecificCause().getMessage()));
+    }
+
+    /** 인자 오류(설정 등) → 400 */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "BAD_REQUEST", "message", ex.getMessage()));
+    }
+
+    /** 그 외 미처리 예외 → 500 (원인 로그 후 클라이언트에는 요약만) */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleException(Exception ex) {
+        Logger log = LoggerFactory.getLogger(OrderControllerAdvice.class);
+        log.error("주문 처리 중 오류", ex);
+        String message = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "INTERNAL_SERVER_ERROR", "message", message != null ? message : "알 수 없는 오류"));
     }
 }
