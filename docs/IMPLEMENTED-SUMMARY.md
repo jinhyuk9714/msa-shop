@@ -66,6 +66,7 @@
 | GET /orders/{id} | 주문 단건 조회 |
 | GET /orders/me | 내 주문 목록 |
 | PATCH /orders/{id}/cancel | PAID 주문 취소(결제 취소 + 재고 복구) |
+| POST /orders/from-cart | 장바구니 전체 주문(품목별 주문 생성 후 장바구니 비움) |
 | GET /cart | 장바구니 조회 |
 | POST /cart/items | 장바구니 추가(동일 상품 시 수량 합산, 재고 검증) |
 | PATCH /cart/items/{productId} | 수량 변경(0이면 삭제) |

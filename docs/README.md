@@ -8,6 +8,7 @@
 ## 시작하기
 
 - **[RUN-LOCAL.md](RUN-LOCAL.md)** — 로컬 실행 순서(bootRun, Docker Compose), E2E 시나리오, 트러블슈팅
+- **[INTERVIEW.md](INTERVIEW.md)** — 면접용 정리(한 줄/30초/1분 요약, 자주 나오는 질문·답변 포인트)
 - **[OPENAPI.md](OPENAPI.md)** — Swagger UI 접근(로컬/K8s), Gateway 통합 `/api-docs`, Authorize 사용법
 - **[PROFILES-AND-SECRETS.md](PROFILES-AND-SECRETS.md)** — Spring 프로파일(default/prod/local), 시크릿·환경 변수
 

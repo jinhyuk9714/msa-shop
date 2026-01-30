@@ -3,6 +3,8 @@
 쇼핑몰 도메인으로 **마이크로서비스(MSA)** 를 연습하는 프로젝트입니다.  
 회원·상품·주문·결제·정산을 서비스별로 나누고, API Gateway·이벤트·보상 트랜잭션을 경험할 수 있습니다.
 
+> **이 프로젝트로 보여주고 싶은 것**: MSA 서비스 경계 설계, SAGA/Outbox 기반 주문·결제 흐름, Gateway·이벤트·관측성까지 경험한 쇼핑몰 백엔드.
+
 ---
 
 ## 프로젝트에서 다루는 것
@@ -76,6 +78,7 @@ Gateway 경유 시 `http://localhost:8080` 하나로 위 API를 모두 호출할
 ## 더 보기
 
 - **시작·실행**: [RUN-LOCAL.md](docs/RUN-LOCAL.md) — 로컬/Docker/E2E 순서, 트러블슈팅
+- **면접 준비**: [INTERVIEW.md](docs/INTERVIEW.md) — 한 줄·30초·1분 요약, 자주 나오는 질문·답변 포인트
 - **아키텍처·API**: [ARCHITECTURE.md](docs/ARCHITECTURE.md), [API-SPEC.md](docs/API-SPEC.md), [IMPLEMENTED-SUMMARY.md](docs/IMPLEMENTED-SUMMARY.md)
 - **장애·설정**: [FAILURE-SCENARIOS.md](docs/FAILURE-SCENARIOS.md), [PROFILES-AND-SECRETS.md](docs/PROFILES-AND-SECRETS.md)
 - **배포·다음 단계**: [CI-IMAGES.md](docs/CI-IMAGES.md), [helm/README.md](helm/README.md), [NEXT-STEPS.md](docs/NEXT-STEPS.md)

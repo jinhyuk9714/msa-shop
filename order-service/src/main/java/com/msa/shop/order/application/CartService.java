@@ -2,9 +2,11 @@ package com.msa.shop.order.application;
 
 import com.msa.shop.order.domain.CartItem;
 import com.msa.shop.order.domain.CartItemRepository;
+import com.msa.shop.order.domain.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,5 +79,34 @@ public class CartService {
     @Transactional
     public void clearCart(Long userId) {
         cartItemRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * 장바구니 전체로 주문 생성. 품목별로 주문 생성 후 장바구니 비우기.
+     * 장바구니가 비어 있으면 IllegalArgumentException.
+     * 중간에 재고 부족·결제 실패 시 예외 발생(이전까지 생성된 주문은 유지, 장바구니는 비우지 않음).
+     */
+    @Transactional
+    public List<Order> createOrdersFromCart(Long userId, String paymentMethod) {
+        List<CartItem> items = cartItemRepository.findByUserIdOrderByProductId(userId);
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("장바구니가 비어 있습니다.");
+        }
+        List<Order> orders = new ArrayList<>();
+        try {
+            for (CartItem item : items) {
+                orders.add(orderService.createOrder(
+                        userId,
+                        item.getProductId(),
+                        item.getQuantity(),
+                        paymentMethod != null ? paymentMethod : "CARD"
+                ));
+            }
+            cartItemRepository.deleteByUserId(userId);
+        } catch (RuntimeException e) {
+            // 일부만 주문 생성된 경우 장바구니는 그대로 두고 예외 전파
+            throw e;
+        }
+        return orders;
     }
 }

@@ -78,6 +78,7 @@
 | 메서드 | 경로               | 설명           | 인증                      |
 | ------ | ------------------ | -------------- | ------------------------- |
 | POST   | `/orders`          | 주문 생성      | Bearer JWT 또는 X-User-Id |
+| POST   | `/orders/from-cart`| 장바구니 전체 주문 | Bearer JWT 또는 X-User-Id |
 | GET    | `/orders/{id}`     | 주문 단건 조회 | Bearer JWT 또는 X-User-Id |
 | GET    | `/orders/me`       | 내 주문 목록   | Bearer JWT 또는 X-User-Id |
 | PATCH  | `/orders/{id}/cancel` | 주문 취소  | Bearer JWT 또는 X-User-Id |
@@ -96,6 +97,13 @@
   Response 409: 재고 부족 `{ "error": "CONFLICT", "message": "..." }`  
   Response 402: 결제 실패 `{ "error": "PAYMENT_REQUIRED", "message": "..." }`  
   Response 502: payment/product 연결 실패 `{ "error": "BAD_GATEWAY", "message": "..." }`
+
+- **POST /orders/from-cart**  
+  장바구니에 담긴 품목별로 주문 생성 후 장바구니 비움.  
+  Request(선택): `{ "paymentMethod": "string" }` (생략 시 CARD)  
+  Response 201: `[{ "id", "userId", "productId", "quantity", "totalAmount", "status": "PAID" }, ...]`  
+  Response 400: 장바구니 비어 있음 `{ "error": "BAD_REQUEST", "message": "장바구니가 비어 있습니다." }`  
+  Response 409/402/502: 품목 중 재고 부족·결제 실패·연결 실패(실패한 품목까지 생성된 주문은 유지, 장바구니는 비우지 않음)
 
 - **GET /orders/{id}**  
   Response 200: `{ "id", "userId", "productId", "quantity", "totalAmount", "status" }`  

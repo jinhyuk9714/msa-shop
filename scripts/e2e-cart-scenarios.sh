@@ -96,13 +96,32 @@ echo "HTTP $DEL_CODE"
 [ "$DEL_CODE" = "204" ] && echo "[OK] 항목 삭제" || echo "[참고] $DEL_CODE"
 echo ""
 
-echo "=== 9. JWT 없이 장바구니 조회 → 401 ==="
+echo "=== 9. 장바구니에서 주문 POST /orders/from-cart → 201 ==="
+FROM_CART_RESP=$(curl -s -w "\n%{http_code}" -X POST "$CART_URL/orders/from-cart" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"paymentMethod":"CARD"}')
+FROM_CART_CODE=$(echo "$FROM_CART_RESP" | tail -n 1)
+FROM_CART_BODY=$(echo "$FROM_CART_RESP" | sed '$d')
+echo "HTTP $FROM_CART_CODE"
+echo "$FROM_CART_BODY" | python3 -m json.tool 2>/dev/null || echo "$FROM_CART_BODY"
+[ "$FROM_CART_CODE" = "201" ] && echo "[OK] 장바구니에서 주문 생성" || { echo "[FAIL] 기대 201 실제 $FROM_CART_CODE"; exit 1; }
+# 장바구니 비워졌는지 확인
+CART_AFTER=$(curl -s -H "Authorization: Bearer $TOKEN" "$CART_URL/cart")
+if [ "$CART_AFTER" = "[]" ]; then
+  echo "[OK] 주문 후 장바구니 비워짐"
+else
+  echo "[참고] 장바구니: $CART_AFTER"
+fi
+echo ""
+
+echo "=== 10. JWT 없이 장바구니 조회 → 401 ==="
 NOAUTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$CART_URL/cart")
 echo "HTTP $NOAUTH_CODE"
 [ "$NOAUTH_CODE" = "401" ] && echo "[OK] 인증 필수" || echo "[참고] $NOAUTH_CODE (Gateway 미사용 시 401/500)"
 echo ""
 
-echo "=== 10. 장바구니 비우기 DELETE /cart → 204 ==="
+echo "=== 11. 장바구니 비우기 DELETE /cart → 204 ==="
 CLEAR_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$CART_URL/cart" \
   -H "Authorization: Bearer $TOKEN")
 echo "HTTP $CLEAR_CODE"

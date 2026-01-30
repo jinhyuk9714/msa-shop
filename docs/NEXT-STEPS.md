@@ -116,7 +116,7 @@ Helm 기본값을 **가벼운 설치**로 바꿨습니다. 로컬/Docker Desktop
 | **6** | **다른 서비스 HPA** | product-service, payment-service 등 트래픽 변동 큰 서비스에 HPA 추가. Helm values·template 확장. | 소 |
 | **7** | ~~API Gateway 통합 Swagger~~ | ✅ 완료. GET /api-docs → 단일 Swagger UI, /api-docs/user-service 등 프록시. [OPENAPI.md](OPENAPI.md) |
 
-- **기능 확장**에 집중하면 → **2번 values-prod** 또는 추가 기능(주문 from-cart 등).
+- **기능 확장**에 집중하면 → **2번 values-prod**. ~~주문 from-cart~~ ✅ `POST /orders/from-cart` 완료.
 - **운영/배포**에 집중하면 → **2번 values-prod**, **3번 시크릿**.
 - **관측성/품질**에 집중하면 → **4번 Grafana**, **5번 CI E2E**, **6번 HPA**, **7번 Gateway Swagger**.
 
