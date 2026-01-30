@@ -23,9 +23,24 @@ mysql:
   image: mysql:8
   persistence:
     size: 1Gi
+  # MySQL 8은 기본 메모리 사용이 커서, 로컬(Docker Desktop 등)에서는 512Mi 제한 시 OOMKilled 발생 가능. 1Gi 권장.
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
 
 rabbitmq:
   image: rabbitmq:3-management
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
 
 redis:
   enabled: true

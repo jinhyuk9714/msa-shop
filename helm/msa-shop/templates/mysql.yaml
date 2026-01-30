@@ -36,6 +36,8 @@ spec:
           image: {{ .Values.mysql.image }}
           ports:
             - containerPort: 3306
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.mysql.resources) | nindent 12 }}
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
