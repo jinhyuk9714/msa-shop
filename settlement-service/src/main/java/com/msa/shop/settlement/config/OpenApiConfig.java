@@ -11,6 +11,6 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
-                .info(new Info().title("Settlement Service API").version("1.0").description("일별·월별 매출 집계 조회"));
+                .info(new Info().title("Settlement Service API").version("1.0").description("일별 매출(GET /settlements/daily)·월별 매출(GET /settlements/monthly). RabbitMQ 결제 완료 이벤트 구독"));
     }
 }

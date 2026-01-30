@@ -16,7 +16,8 @@
 | CI (GitHub Actions) | ✅ |
 | Testcontainers 통합 테스트 | ✅ |
 | 프로파일·시크릿 (prod) | ✅ |
-| Prometheus·Grafana·Zipkin | Docker Compose에만 있음 |
+| Prometheus·Grafana·Zipkin (K8s/Helm) | ✅ |
+| OpenAPI/Swagger UI (6개 서비스) | ✅ |
 
 ---
 
@@ -43,7 +44,18 @@
 
 ---
 
-### 3. 프로덕션 준비
+### 3. API 문서 자동화 (Swagger/OpenAPI) ✅ 완료
+
+**구현 내용:** springdoc-openapi로 각 서비스 Swagger UI 노출
+
+- **6개 서비스**: user, product, order, payment, settlement, api-gateway — 모두 `/swagger-ui.html`, `/v3/api-docs` 제공
+- **API Gateway**: WebFlux용 springdoc 추가, 라우팅 표·백엔드 Swagger 링크 안내
+- **접근**: 로컬 `http://localhost:8081/swagger-ui.html` 등, K8s는 port-forward 후 동일
+- 상세: [`docs/OPENAPI.md`](OPENAPI.md)
+
+---
+
+### 4. 프로덕션 준비
 
 **목표:** 운영 환경에 맞게 보안·설정 보강
 
@@ -59,7 +71,7 @@
 
 ---
 
-### 4. 기능 확장
+### 5. 기능 확장
 
 **목표:** 쇼핑몰 기능 확대
 
@@ -73,7 +85,7 @@
 
 ---
 
-### 5. 성능·안정성
+### 6. 성능·안정성
 
 | 항목 | 설명 |
 |------|------|

@@ -53,6 +53,7 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 | [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)             | 구현 현황·모듈·API·E2E·Docker              |
 | [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)                       | 로컬 실행 가이드·E2E 시나리오              |
 | [`docs/API-SPEC.md`](docs/API-SPEC.md)                         | 서비스별 REST API 스펙 요약                |
+| [`docs/OPENAPI.md`](docs/OPENAPI.md)                           | Swagger UI·OpenAPI 접근 방법 (로컬/K8s)   |
 | [`docs/FAILURE-SCENARIOS.md`](docs/FAILURE-SCENARIOS.md)       | 장애/실패 시나리오와 대응 전략             |
 | [`docs/PROFILES-AND-SECRETS.md`](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리  |
 | [`docs/NEXT-STEPS.md`](docs/NEXT-STEPS.md)                     | 다음 단계 가이드(관측성·CI/CD·기능 확장)   |

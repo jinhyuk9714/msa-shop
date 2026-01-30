@@ -11,6 +11,6 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
-                .info(new Info().title("Product Service API").version("1.0").description("상품·재고 조회 및 재고 예약/복구"));
+                .info(new Info().title("Product Service API").version("1.0").description("상품 목록·단건 조회(GET /products). 내부: POST /internal/stocks/reserve, /internal/stocks/release(재고 예약/복구)"));
     }
 }

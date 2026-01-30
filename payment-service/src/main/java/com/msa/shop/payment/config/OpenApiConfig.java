@@ -11,6 +11,6 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
-                .info(new Info().title("Payment Service API").version("1.0").description("결제 시도·취소(보상)"));
+                .info(new Info().title("Payment Service API").version("1.0").description("결제 시도(POST /payments)·결제 취소(POST /payments/{id}/cancel). order-service 내부 호출용"));
     }
 }
