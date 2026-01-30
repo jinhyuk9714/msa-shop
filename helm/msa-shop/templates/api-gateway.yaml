@@ -22,6 +22,8 @@ spec:
         - name: api-gateway
           image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}"
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.apiGateway.resources) | nindent 12 }}
           ports:
             - containerPort: 8080
           env:

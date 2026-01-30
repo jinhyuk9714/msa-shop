@@ -47,32 +47,36 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 
 ## 문서
 
-| 문서                                                           | 설명                                       |
-| -------------------------------------------------------------- | ------------------------------------------ |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                 | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
-| [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md)             | 구현 현황·모듈·API·E2E·Docker              |
-| [`docs/RUN-LOCAL.md`](docs/RUN-LOCAL.md)                       | 로컬 실행 가이드·E2E 시나리오              |
-| [`docs/API-SPEC.md`](docs/API-SPEC.md)                         | 서비스별 REST API 스펙 요약                |
-| [`docs/OPENAPI.md`](docs/OPENAPI.md)                           | Swagger UI·OpenAPI 접근 방법 (로컬/K8s)   |
-| [`docs/FAILURE-SCENARIOS.md`](docs/FAILURE-SCENARIOS.md)       | 장애/실패 시나리오와 대응 전략             |
-| [`docs/PROFILES-AND-SECRETS.md`](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리  |
-| [`docs/NEXT-STEPS.md`](docs/NEXT-STEPS.md)                     | 다음 단계 가이드(관측성·CI/CD·기능 확장)   |
-| [`docs/CI-IMAGES.md`](docs/CI-IMAGES.md)                       | CI 이미지 빌드(ghcr.io)·Helm 배포          |
+| 문서 | 설명 |
+|------|------|
+| [docs/README.md](docs/README.md) | 문서 목차(인덱스) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 아키텍처·서비스 구성·주문 플로우·기술 스택 |
+| [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 구현 현황·모듈·API·E2E·Docker |
+| [docs/RUN-LOCAL.md](docs/RUN-LOCAL.md) | 로컬 실행 가이드·E2E 시나리오 |
+| [docs/API-SPEC.md](docs/API-SPEC.md) | 서비스별 REST API 스펙 요약 |
+| [docs/OPENAPI.md](docs/OPENAPI.md) | Swagger UI 접근·테스트 순서 (로컬/K8s) |
+| [docs/FAILURE-SCENARIOS.md](docs/FAILURE-SCENARIOS.md) | 장애/실패 시나리오와 대응 전략 |
+| [docs/PROFILES-AND-SECRETS.md](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리 |
+| [docs/NEXT-STEPS.md](docs/NEXT-STEPS.md) | 다음 단계 가이드(리소스·HPA·기능 확장) |
+| [docs/CI-IMAGES.md](docs/CI-IMAGES.md) | CI 이미지 빌드(ghcr.io)·Helm 배포 |
+| [docs/K8S-EXPANSION.md](docs/K8S-EXPANSION.md) | K8s 확장 계획·ConfigMap·Secret |
+| [k8s/README.md](k8s/README.md) | Kubernetes 매니페스트 배포 순서 |
+| [helm/README.md](helm/README.md) | Helm 차트 설치·리소스·HPA |
 
 ## 모듈
 
 - **api-gateway** (8080): 클라이언트 단일 진입점, 라우팅·JWT 검증·X-User-Id 전달.
-- **user-service** (8081): 회원가입, 로그인(더미 토큰), GET /users/me, 409 중복 이메일
+- **user-service** (8081): 회원가입, 로그인(JWT 발급), GET /users/me, 409 중복 이메일
 - **product-service** (8082): 상품/재고, `POST /internal/stocks/reserve`, `POST /internal/stocks/release`(보상), 테스트 상품 시딩
 - **order-service** (8083): 주문 생성·조회, product/payment 연동, SAGA 보상(결제 실패 시 재고 복구), Outbox(결제 성공 후 주문 저장 실패 시 결제 취소·재고 복구)
 - **payment-service** (8084): 가짜 PG 결제 승인, `POST /payments/{id}/cancel`(보상용). 결제 완료 시 RabbitMQ로 이벤트 발행
 - **settlement-service** (8085): RabbitMQ에서 결제 완료 이벤트 구독, 일별 매출 집계(`GET /settlements/daily`)
-- **OpenAPI**: 각 서비스 `/swagger-ui.html`, `/v3/api-docs` (springdoc-openapi 2.5.0)
+- **OpenAPI**: 각 서비스 `/api-docs.html` (Swagger UI), `/v3/api-docs` (springdoc-openapi 2.8.15)
 
 ## 테스트·배포
 
 - **단위·통합 테스트**: `./gradlew test`. order/product/user/payment 서비스 통합 테스트는 Testcontainers(MySQL·RabbitMQ·MockWebServer) 사용(Docker 필요).
 - **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-- **K8s**: [`k8s/README.md`](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서·파일 구성. 배포 후 `kubectl port-forward svc/api-gateway 8080:8080` + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.
-- **Helm**: [`helm/README.md`](helm/README.md) — 동일 스택을 Helm 차트로 설치·업그레이드·다중 설치(릴리스별 접두사).
-- **CI 이미지 빌드**: main 푸시 시 6개 서비스 이미지 자동 빌드 → ghcr.io 푸시. [`.github/workflows/build-images.yml`](.github/workflows/build-images.yml). `values-ghcr.yaml` 로 배포.
+- **K8s**: [k8s/README.md](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서. 배포 후 port-forward + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.
+- **Helm**: [helm/README.md](helm/README.md) — 동일 스택을 Helm 차트로 설치·업그레이드. 리소스·HPA(order-service) 설정 포함.
+- **CI 이미지 빌드**: main 푸시 시 6개 서비스 이미지 자동 빌드 → ghcr.io 푸시. [.github/workflows/build-images.yml](.github/workflows/build-images.yml), [docs/CI-IMAGES.md](docs/CI-IMAGES.md). `values-ghcr.yaml` 로 Helm 배포.

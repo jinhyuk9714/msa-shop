@@ -89,6 +89,17 @@ kubectl logs deployment/msa-shop-user-service --tail=50
 kubectl rollout restart deployment/msa-shop-api-gateway
 ```
 
+## 리소스·HPA
+
+- **Pod 리소스**: 모든 앱 Deployment에 `resources.requests`/`limits`가 적용됩니다. 기본값은 `values.yaml`의 `defaultResources`(예: requests 256Mi/100m, limits 512Mi/500m). 서비스별 오버라이드:
+  ```bash
+  --set orderService.resources.requests.memory=512Mi \
+  --set orderService.resources.limits.cpu=1000m
+  ```
+- **order-service HPA**: CPU 사용률 기반 자동 스케일. 기본값 `minReplicas=1`, `maxReplicas=3`, `targetCPUUtilizationPercentage=70`. **클러스터에 metrics-server가 있어야** 동작합니다.
+  - 비활성화: `--set orderService.hpa.enabled=false`
+  - 조정: `--set orderService.hpa.maxReplicas=5 --set orderService.hpa.targetCPUUtilizationPercentage=80`
+
 ## 값 오버라이드
 
 - **이미지 레지스트리/태그**: `--set userService.image.repository=myreg/msa-shop-user-service` 등
@@ -122,7 +133,7 @@ helm uninstall msa-shop
 |------|------|
 | `msa-shop/Chart.yaml` | 차트 메타데이터 |
 | `msa-shop/values.yaml` | 기본 값(이미지, 레플리카, 비밀, Ingress, observability 등) |
-| `msa-shop/templates/` | Secret, ConfigMap, MySQL, RabbitMQ, 6개 앱, Ingress, Prometheus, Grafana, Zipkin |
+| `msa-shop/templates/` | Secret, ConfigMap, MySQL, RabbitMQ, 6개 앱(리소스 포함), order-service HPA, Ingress, Prometheus, Grafana, Zipkin |
 
 모든 리소스 이름에 `{{ .Release.Name }}` 접두사가 붙어 동일 클러스터에 `msa-shop`, `msa-shop-staging` 등 여러 릴리스를 설치할 수 있습니다.
 

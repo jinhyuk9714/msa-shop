@@ -22,6 +22,8 @@ spec:
         - name: payment-service
           image: "{{ .Values.paymentService.image.repository }}:{{ .Values.paymentService.image.tag }}"
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.paymentService.resources) | nindent 12 }}
           ports:
             - containerPort: 8084
           env:

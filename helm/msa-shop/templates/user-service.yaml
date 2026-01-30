@@ -22,6 +22,8 @@ spec:
         - name: user-service
           image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.userService.resources) | nindent 12 }}
           ports:
             - containerPort: 8081
           env:

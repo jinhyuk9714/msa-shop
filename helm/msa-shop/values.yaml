@@ -2,6 +2,14 @@
 # 이미지: 로컬 빌드 시 msa-shop-*:latest, 레지스트리 사용 시 your-registry/msa-shop-*:tag
 global:
   imagePullPolicy: IfNotPresent
+# 앱 공통 리소스 기본값. 서비스별로 오버라이드 가능.
+defaultResources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
 
 secrets:
   mysqlRootPassword: "root"
@@ -19,36 +27,47 @@ rabbitmq:
 
 apiGateway:
   replicas: 1
+  resources: {}  # 비우면 global defaultResources 사용 (템플릿에서 fallback)
   image:
     repository: msa-shop-api-gateway
     tag: latest
 
 userService:
   replicas: 1
+  resources: {}
   image:
     repository: msa-shop-user-service
     tag: latest
 
 productService:
   replicas: 1
+  resources: {}
   image:
     repository: msa-shop-product-service
     tag: latest
 
 orderService:
   replicas: 1
+  resources: {}
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
   image:
     repository: msa-shop-order-service
     tag: latest
 
 paymentService:
   replicas: 1
+  resources: {}
   image:
     repository: msa-shop-payment-service
     tag: latest
 
 settlementService:
   replicas: 1
+  resources: {}
   image:
     repository: msa-shop-settlement-service
     tag: latest

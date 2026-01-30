@@ -58,15 +58,15 @@ gradle wrapper
 4. **주문 생성** `POST /orders` (order-service, Bearer JWT + productId=1, quantity=2)
 5. 성공 시 **주문 단건 조회** `GET /orders/{id}`
 
-**API 문서 (OpenAPI/Swagger)**: 각 서비스 기동 후 브라우저에서 Swagger UI·스펙 확인 가능.
+**API 문서 (OpenAPI/Swagger)**: 각 서비스 기동 후 브라우저에서 Swagger UI로 확인. 상세·테스트 순서는 [docs/OPENAPI.md](OPENAPI.md) 참고.
 
-| 서비스             | Swagger UI                            | OpenAPI 스펙                      |
-| ------------------ | ------------------------------------- | --------------------------------- |
-| user-service       | http://localhost:8081/swagger-ui.html | http://localhost:8081/v3/api-docs |
-| product-service    | http://localhost:8082/swagger-ui.html | http://localhost:8082/v3/api-docs |
-| order-service      | http://localhost:8083/swagger-ui.html | http://localhost:8083/v3/api-docs |
-| payment-service    | http://localhost:8084/swagger-ui.html | http://localhost:8084/v3/api-docs |
-| settlement-service | http://localhost:8085/swagger-ui.html | http://localhost:8085/v3/api-docs |
+| 서비스             | Swagger UI (api-docs.html)       | OpenAPI 스펙        |
+| ------------------ | --------------------------------- | ------------------- |
+| user-service       | http://localhost:8081/api-docs.html | http://localhost:8081/v3/api-docs |
+| product-service    | http://localhost:8082/api-docs.html | http://localhost:8082/v3/api-docs |
+| order-service      | http://localhost:8083/api-docs.html | http://localhost:8083/v3/api-docs |
+| payment-service    | http://localhost:8084/api-docs.html | http://localhost:8084/v3/api-docs |
+| settlement-service | http://localhost:8085/api-docs.html | http://localhost:8085/v3/api-docs |
 
 Docker Compose 사용 시 위 포트는 호스트에서 동일하게 접근 가능.
 

@@ -288,8 +288,8 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 
 ## OpenAPI (Swagger)
 
-- **springdoc-openapi-starter-webmvc-ui** 2.5.0 적용: user, product, order, payment, settlement 5개 서비스.
-- **경로**: `/swagger-ui.html` (Swagger UI), `/v3/api-docs` (OpenAPI 3.0 JSON). 각 서비스 포트(8081~8085)에서 접근.
+- **springdoc-openapi-starter-webmvc-ui** 2.8.15 적용: user, product, order, payment, settlement 5개 서비스.
+- **경로**: `/api-docs.html` (Swagger UI), `/v3/api-docs` (OpenAPI 3.0 JSON). 각 서비스 포트(8081~8085)에서 접근. 상세는 [docs/OPENAPI.md](OPENAPI.md).
 - **user-service**: SecurityConfig에서 `/swagger-ui/**`, `/v3/api-docs/**` permitAll.
 - **OpenApiConfig**: 서비스별 `OpenAPI` 빈으로 title·description 설정 (User/Product/Order/Payment/Settlement Service API).
 
@@ -354,4 +354,4 @@ order-service `OrderControllerAdvice`: 재고 부족 → 409, 결제 실패 → 
 - ~~3단계: API Gateway~~ (Spring Cloud Gateway 8080, 라우팅·JWT 검증·X-User-Id 전달)
 - ~~이벤트 드리븐 (RabbitMQ)~~ (결제 완료: payment-service → RabbitMQ topic `payment.events` → settlement-service 구독)
 - ~~관측성 (Observability)~~ (Actuator·Prometheus·Grafana 메트릭, Micrometer Tracing·Zipkin 분산 추적)
-- ~~OpenAPI (Swagger)~~ (springdoc-openapi 2.5.0, 각 서비스 /swagger-ui.html, /v3/api-docs)
+- ~~OpenAPI (Swagger)~~ (springdoc-openapi 2.8.15, 각 서비스 /api-docs.html, /v3/api-docs)

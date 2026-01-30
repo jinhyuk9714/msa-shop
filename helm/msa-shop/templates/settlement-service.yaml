@@ -22,6 +22,8 @@ spec:
         - name: settlement-service
           image: "{{ .Values.settlementService.image.repository }}:{{ .Values.settlementService.image.tag }}"
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.settlementService.resources) | nindent 12 }}
           ports:
             - containerPort: 8085
           env:

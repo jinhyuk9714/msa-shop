@@ -1,0 +1,24 @@
+# order-service HPA. CPU 사용률 기반 자동 스케일. 클러스터에 metrics-server 필요.
+{{- if .Values.orderService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-order-service
+  labels:
+    app: order-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-order-service
+  minReplicas: {{ .Values.orderService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.orderService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.orderService.hpa.targetCPUUtilizationPercentage }}
+{{- end }}

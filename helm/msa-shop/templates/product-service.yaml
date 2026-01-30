@@ -22,6 +22,8 @@ spec:
         - name: product-service
           image: "{{ .Values.productService.image.repository }}:{{ .Values.productService.image.tag }}"
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          resources:
+            {{- toYaml (default .Values.defaultResources .Values.productService.resources) | nindent 12 }}
           ports:
             - containerPort: 8082
           env:

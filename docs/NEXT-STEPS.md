@@ -17,7 +17,8 @@
 | Testcontainers 통합 테스트 | ✅ |
 | 프로파일·시크릿 (prod) | ✅ |
 | Prometheus·Grafana·Zipkin (K8s/Helm) | ✅ |
-| OpenAPI/Swagger UI (6개 서비스) | ✅ |
+| OpenAPI/Swagger UI (5개 앱, api-docs.html) | ✅ |
+| Deployment 리소스·order-service HPA (Helm) | ✅ |
 
 ---
 
@@ -48,10 +49,9 @@
 
 **구현 내용:** springdoc-openapi로 각 서비스 Swagger UI 노출
 
-- **6개 서비스**: user, product, order, payment, settlement, api-gateway — 모두 `/swagger-ui.html`, `/v3/api-docs` 제공
-- **API Gateway**: WebFlux용 springdoc 추가, 라우팅 표·백엔드 Swagger 링크 안내
-- **접근**: 로컬 `http://localhost:8081/swagger-ui.html` 등, K8s는 port-forward 후 동일
-- 상세: [`docs/OPENAPI.md`](OPENAPI.md)
+- **5개 앱 서비스**: user, product, order, payment, settlement — `/api-docs.html` (Swagger UI), `/v3/api-docs`. API Gateway는 Swagger UI 없음.
+- **접근**: 로컬 `http://localhost:8081/api-docs.html` 등, K8s는 port-forward 후 동일
+- 상세·테스트 순서: [`docs/OPENAPI.md`](OPENAPI.md)
 
 ---
 
@@ -66,8 +66,8 @@
   - 레지스트리 URL·태그 전략 정리
   - `imagePullSecrets` 설정
 - **리소스**
-  - Deployment에 `resources.requests`/`limits` 설정
-  - HPA(Horizontal Pod Autoscaler) 검토
+  - Deployment에 `resources.requests`/`limits` 설정 ✅ Helm 차트에 반영 (`defaultResources`, 서비스별 오버라이드 가능)
+  - HPA(Horizontal Pod Autoscaler) ✅ order-service HPA 기본 활성화 (min 1, max 3, CPU 70%). `helm/README.md` 참고.
 
 ---
 
@@ -99,7 +99,7 @@
 ## 빠르게 시도해볼 수 있는 것
 
 - **Argo CD 설치·연동**: Git push 시 자동 K8s 배포
-- **HPA 추가**: `kubectl autoscale deployment msa-shop-order-service --min=1 --max=3 --cpu-percent=70`
+- **HPA**: Helm 기본값으로 order-service HPA 활성화됨. 비활성화 시 `--set orderService.hpa.enabled=false`. [`helm/README.md`](../helm/README.md) 참고.
 - **values-prod.yaml 작성**: 운영용 values 파일 예시
 
 ---
