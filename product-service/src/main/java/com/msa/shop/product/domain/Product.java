@@ -17,6 +17,10 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    /** 카테고리(예: 전자, 생활, 식품). 검색·필터용. */
+    @Column(length = 50)
+    private String category;
+
     @Column(nullable = false)
     private int price;
 
@@ -27,7 +31,12 @@ public class Product {
     }
 
     public Product(String name, int price, int stockQuantity) {
+        this(name, null, price, stockQuantity);
+    }
+
+    public Product(String name, String category, int price, int stockQuantity) {
         this.name = name;
+        this.category = category;
         this.price = price;
         this.stockQuantity = stockQuantity;
     }
@@ -38,6 +47,10 @@ public class Product {
 
     public String getName() {
         return name;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public int getPrice() {

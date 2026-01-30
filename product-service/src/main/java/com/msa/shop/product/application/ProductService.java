@@ -28,11 +28,11 @@ public class ProductService {
     }
 
     /**
-     * 상품 검색. name(부분 일치, 대소문자 무시), minPrice, maxPrice 중 null이 아닌 값만 조건 적용.
+     * 상품 검색. name(부분 일치), category(일치), minPrice, maxPrice 중 null이 아닌 값만 조건 적용.
      */
     @Transactional(readOnly = true)
-    public List<Product> searchProducts(String name, Integer minPrice, Integer maxPrice) {
-        return productRepository.search(name, minPrice, maxPrice);
+    public List<Product> searchProducts(String name, String category, Integer minPrice, Integer maxPrice) {
+        return productRepository.search(name, category, minPrice, maxPrice);
     }
 
     @Transactional(readOnly = true)

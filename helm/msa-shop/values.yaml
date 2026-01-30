@@ -112,3 +112,4 @@ observability:
     adminPassword: admin
   zipkin:
     image: openzipkin/zipkin:latest
+    # 로컬 클러스터(Docker Desktop 등)에서 limits 없으면 OOMKilled 발생 가능. template에 512Mi 기본 적용.

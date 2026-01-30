@@ -3,6 +3,12 @@ spring:
   h2:
     console:
       enabled: false
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+      max-lifetime: 600000
 
 logging:
   level:

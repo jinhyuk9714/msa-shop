@@ -1,8 +1,14 @@
-# prod: H2 비활성, 로그 축소.
+# prod: H2 비활성, 로그 축소, HikariCP 풀 설정.
 spring:
   h2:
     console:
       enabled: false
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+      max-lifetime: 600000
 
 logging:
   level:

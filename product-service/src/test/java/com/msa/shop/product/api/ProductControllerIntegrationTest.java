@@ -56,7 +56,7 @@ class ProductControllerIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody()).isNotEmpty();
-        assertThat(res.getBody().get(0)).containsKeys("id", "name", "price", "stockQuantity");
+        assertThat(res.getBody().get(0)).containsKeys("id", "name", "category", "price", "stockQuantity");
     }
 
     @Test
@@ -72,7 +72,7 @@ class ProductControllerIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().get("id")).isEqualTo(1);
-        assertThat(res.getBody()).containsKeys("name", "price", "stockQuantity");
+        assertThat(res.getBody()).containsKeys("name", "category", "price", "stockQuantity");
     }
 
     @Test
@@ -108,6 +108,22 @@ class ProductControllerIntegrationTest {
             int price = (Integer) m.get("price");
             return price >= 5000 && price <= 15000;
         });
+    }
+
+    @Test
+    @DisplayName("GET /products?category=전자 → 200, 카테고리 일치 검색")
+    void getProductsByCategory() {
+        String base = "http://localhost:" + port;
+        ResponseEntity<List<Map<String, Object>>> res = restTemplate.exchange(
+                base + "/products?category=전자",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        );
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getBody()).allMatch(m -> "전자".equals(m.get("category")));
     }
 
     @Test

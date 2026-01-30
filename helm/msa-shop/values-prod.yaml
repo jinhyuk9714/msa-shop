@@ -1,5 +1,6 @@
-# 프로덕션용 values 예시. 실제 비밀값은 Sealed Secrets / External Secrets / Vault 등으로 주입 권장.
+# 프로덕션용 values 예시. 실제 비밀값은 Git/values에 넣지 말고 시크릿 관리 도구로 주입.
 # 사용: helm install msa-shop ./helm/msa-shop -f helm/msa-shop/values.yaml -f helm/msa-shop/values-prod.yaml
+# 시크릿 주입 방법: docs/SECRETS-OPERATIONS.md (Sealed Secrets, ESO, Vault, CI 주입)
 
 global:
   imagePullPolicy: Always

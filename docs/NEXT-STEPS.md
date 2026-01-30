@@ -74,7 +74,7 @@
 |------|------|
 | ~~주문 취소 API~~ | ✅ `PATCH /orders/{id}/cancel` — PAID 주문 취소 (결제 취소 + 재고 복구) |
 | 장바구니 서비스 | 별도 서비스 또는 order-service 확장 |
-| 상품 카테고리 | product-service에 카테고리 필드/테이블 추가 |
+| ~~상품 카테고리~~ | ✅ product-service: Product.category, GET /products?category=, 시딩(전자/생활/식품) |
 | ~~상품 검색~~ | ✅ `GET /products?name=...&minPrice=...&maxPrice=...` (이름 부분 일치, 가격 범위) |
 | ~~정산 API Gateway 노출~~ | ✅ `app.settlements.auth-required`(기본 false). true면 `/settlements/**` JWT 필수. Helm: `apiGateway.settlementsAuthRequired` |
 
@@ -87,7 +87,7 @@
 | HPA | ✅ order-service CPU 기반 (Helm 기본) |
 | ~~Redis 캐시~~ | ✅ product-service 상품 목록·단건 조회 Redis 캐시. 재고 변경 시 evict. Docker/Helm Redis 포함. 로컬: profile local 시 Redis 제외 |
 | Rate Limiting | ✅ API Gateway 인메모리 Rate Limit (IP당 분당 120회, 429 초과 시). `app.rate-limit.per-minute`, `/actuator/health` 제외 |
-| DB 커넥션 풀 | HikariCP 설정 조정 (미구현) |
+| ~~DB 커넥션 풀~~ | ✅ prod 프로파일: spring.datasource.hikari (maximum-pool-size 10, min-idle 2, timeout, max-lifetime) 5개 서비스 |
 
 ---
 

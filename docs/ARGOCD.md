@@ -49,6 +49,37 @@ kubectl apply -f argocd/application.yaml
 3. `destination.namespace`(기본 `msa-shop`)에 리소스 생성·업데이트
 4. `syncPolicy.automated`가 있으면 Git과 클러스터 상태를 자동으로 맞춤
 
+## 연동 후 확인 절차 (체크리스트)
+
+1. **Argo CD 설치**  
+   `kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml` 후 Pod가 모두 Running인지 확인.
+
+2. **저장소 등록**  
+   공개 Git이면 별도 등록 없이 Application에서 바로 사용. 비공개면 Argo CD UI **Settings → Repositories**에서 URL·인증 정보 추가.
+
+3. **Application 적용**  
+   `argocd/application.yaml`의 `repoURL`을 본인 저장소로 수정 후 `kubectl apply -f argocd/application.yaml`.
+
+4. **동기화 확인**  
+   Argo CD UI에서 `msa-shop` 앱 선택 → **Sync** (또는 자동 sync 대기). **Healthy**·**Synced** 상태가 되면 배포 완료.
+
+5. **Pod 준비 대기**  
+   `kubectl get pods -n msa-shop -w` 로 MySQL·RabbitMQ·Redis·6개 앱이 모두 Running 될 때까지 대기.
+
+6. **E2E 검증**  
+   `kubectl port-forward svc/msa-shop-api-gateway 8080:8080 -n msa-shop` (별도 터미널 유지)  
+   → `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 또는 `./scripts/e2e-all-scenarios.sh`.
+
+**"Application referencing project default which does not exist"** 가 나오면 default 프로젝트가 없는 것입니다. 한 번 적용:
+
+```bash
+kubectl apply -f argocd/default-project.yaml
+```
+
+이후 Argo CD UI에서 msa-shop 앱이 Healthy로 바뀔 수 있습니다.
+
+문제 시: Argo CD UI에서 **Application Details → Events** 또는 `kubectl get applications -n argocd` 로 상태 확인.
+
 ## 참고
 
 - [Argo CD 문서](https://argo-cd.readthedocs.io/)

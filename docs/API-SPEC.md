@@ -56,11 +56,11 @@
 ### 요청/응답
 
 - **GET /products**  
-  Query(선택): `name`(상품명 부분 일치), `minPrice`, `maxPrice`(가격 범위). 없으면 전체 목록.  
-  Response 200: `[{ "id", "name", "price", "stockQuantity" }, ...]`
+  Query(선택): `name`(상품명 부분 일치), `category`(카테고리 일치), `minPrice`, `maxPrice`(가격 범위). 없으면 전체 목록.  
+  Response 200: `[{ "id", "name", "category", "price", "stockQuantity" }, ...]`
 
 - **GET /products/{id}**  
-  Response 200: `{ "id", "name", "price", "stockQuantity" }`
+  Response 200: `{ "id", "name", "category", "price", "stockQuantity" }`
 
 - **POST /internal/stocks/reserve**  
   Request: `{ "userId": number, "productId": number, "quantity": number }`  

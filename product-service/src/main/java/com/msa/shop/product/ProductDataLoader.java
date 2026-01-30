@@ -24,8 +24,8 @@ public class ProductDataLoader implements CommandLineRunner {
         if (productRepository.count() > 0) {
             return;
         }
-        productRepository.save(new Product("테스트 상품 A", 10_000, 100));
-        productRepository.save(new Product("테스트 상품 B", 25_000, 50));
-        productRepository.save(new Product("테스트 상품 C", 5_000, 5));
+        productRepository.save(new Product("테스트 상품 A", "전자", 10_000, 100));
+        productRepository.save(new Product("테스트 상품 B", "생활", 25_000, 50));
+        productRepository.save(new Product("테스트 상품 C", "식품", 5_000, 5));
     }
 }

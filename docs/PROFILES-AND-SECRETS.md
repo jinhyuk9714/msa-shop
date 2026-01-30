@@ -23,6 +23,7 @@
 - **JWT**: `APP_JWT_SECRET` 환경 변수 필수. `application-prod.yml`에서 기본값 없이 참조.
 - **H2 콘솔**: 비활성
 - **로그**: `logging.level.root=WARN`, `com.msa=INFO`로 축소
+- **HikariCP**: `application-prod.yml`에서 `spring.datasource.hikari` (maximum-pool-size 10, minimum-idle 2, connection-timeout 5000, max-lifetime 600000) 적용
 
 ---
 
