@@ -2,6 +2,7 @@ package com.msa.shop.order.api;
 
 import com.msa.shop.order.application.InsufficientStockException;
 import com.msa.shop.order.application.InvalidTokenException;
+import com.msa.shop.order.application.OrderCannotBeCancelledException;
 import com.msa.shop.order.application.OrderNotFoundException;
 import com.msa.shop.order.application.PaymentFailedException;
 import org.slf4j.Logger;
@@ -37,6 +38,14 @@ public class OrderControllerAdvice {
         return ResponseEntity
                 .status(HttpStatus.PAYMENT_REQUIRED)
                 .body(Map.of("error", "PAYMENT_REQUIRED", "message", ex.getMessage()));
+    }
+
+    /** 주문 취소 불가 → 409 CONFLICT */
+    @ExceptionHandler(OrderCannotBeCancelledException.class)
+    public ResponseEntity<Map<String, String>> handleOrderCannotBeCancelled(OrderCannotBeCancelledException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", ex.getMessage()));
     }
 
     /** 주문 없음 → 404 NOT_FOUND */

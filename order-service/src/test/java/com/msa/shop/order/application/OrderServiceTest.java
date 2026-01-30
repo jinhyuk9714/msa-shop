@@ -250,4 +250,50 @@ class OrderServiceTest {
             assertThat(result.get(0).getProductId()).isEqualTo(1L);
         }
     }
+
+    @Nested
+    @DisplayName("cancelOrder")
+    class CancelOrder {
+
+        @Test
+        @DisplayName("PAID 주문 취소 시 결제 취소 + 재고 복구 + CANCELLED")
+        void success() {
+            Order order = new Order(1L, 1L, 2, 20_000, OrderStatus.PAID, 100L);
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+            server.expect(requestTo(PAYMENT_BASE + "/payments/100/cancel"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andRespond(withSuccess());
+            server.expect(requestTo(PRODUCT_BASE + "/internal/stocks/release"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andRespond(withSuccess());
+            when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Order result = orderService.cancelOrder(1L, 1L);
+
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+            server.verify();
+        }
+
+        @Test
+        @DisplayName("paymentId 없으면 OrderCannotBeCancelledException")
+        void noPaymentId() {
+            Order order = new Order(1L, 1L, 2, 20_000, OrderStatus.PAID);  // paymentId null
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+            assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L))
+                    .isInstanceOf(OrderCannotBeCancelledException.class)
+                    .hasMessageContaining("결제 정보가 없어");
+        }
+
+        @Test
+        @DisplayName("이미 CANCELLED면 OrderCannotBeCancelledException")
+        void alreadyCancelled() {
+            Order order = new Order(1L, 1L, 2, 20_000, OrderStatus.CANCELLED, 100L);
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+            assertThatThrownBy(() -> orderService.cancelOrder(1L, 1L))
+                    .isInstanceOf(OrderCannotBeCancelledException.class)
+                    .hasMessageContaining("취소할 수 없는 주문");
+        }
+    }
 }

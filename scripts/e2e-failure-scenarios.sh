@@ -40,6 +40,44 @@ else
 fi
 echo ""
 
+echo "=== 2. 주문 취소 성공 (PAID → CANCELLED) ==="
+echo "주문 생성 후 바로 취소."
+ORDER_RESP=$(curl -s -w "\n%{http_code}" -X POST "$ORDER_URL/orders" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"productId":1,"quantity":1,"paymentMethod":"CARD"}')
+ORDER_BODY=$(echo "$ORDER_RESP" | sed '$d')
+ORDER_CODE=$(echo "$ORDER_RESP" | tail -n 1)
+ORDER_ID=$(echo "$ORDER_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || true)
+if [ "$ORDER_CODE" = "201" ] && [ -n "$ORDER_ID" ]; then
+  CANCEL_RESP=$(curl -s -w "\n%{http_code}" -X PATCH "$ORDER_URL/orders/$ORDER_ID/cancel" \
+    -H "Authorization: Bearer $TOKEN")
+  CANCEL_CODE=$(echo "$CANCEL_RESP" | tail -n 1)
+  echo "PATCH /orders/$ORDER_ID/cancel → HTTP $CANCEL_CODE"
+  if [ "$CANCEL_CODE" = "200" ]; then
+    echo "[OK] 주문 취소 성공"
+  else
+    echo "[참고] 취소 실패 (기존 주문에 paymentId 없으면 409)"
+  fi
+else
+  echo "[스킵] 주문 생성 실패로 취소 테스트 생략"
+fi
+echo ""
+
+echo "=== 3. 이미 취소된 주문 재취소 (409) ==="
+if [ -n "$ORDER_ID" ]; then
+  CANCEL2=$(curl -s -w "\n%{http_code}" -X PATCH "$ORDER_URL/orders/$ORDER_ID/cancel" \
+    -H "Authorization: Bearer $TOKEN")
+  CODE2=$(echo "$CANCEL2" | tail -n 1)
+  echo "동일 주문 재취소 → HTTP $CODE2"
+  if [ "$CODE2" = "409" ]; then
+    echo "[OK] 예상대로 409 CONFLICT (이미 취소됨)"
+  fi
+else
+  echo "[스킵] 위에서 주문 ID 없음"
+fi
+echo ""
+
 echo "=== 완료 ==="
 echo "추가 시나리오: 결제 실패(402)는 payment-service 규칙(amount 등)으로 유도 가능."
 echo "문서: docs/FAILURE-SCENARIOS.md"

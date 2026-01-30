@@ -76,7 +76,7 @@ public class OrderService {
         }
 
         // 3) 주문 저장. 실패 시 Outbox에 보상 이벤트 기록 → 스케줄러가 결제 취소·재고 복구 수행
-        Order order = new Order(userId, productId, quantity, totalAmount, OrderStatus.PAID);
+        Order order = new Order(userId, productId, quantity, totalAmount, OrderStatus.PAID, paymentId);
         try {
             return orderRepository.save(order);
         } catch (Exception ex) {
@@ -96,6 +96,43 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> getOrdersByUser(Long userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    /**
+     * 주문 취소. PAID 상태만 취소 가능.
+     * 1) 결제 취소 (payment-service) 2) 재고 복구 (product-service) 3) 주문 상태 CANCELLED
+     */
+    @Transactional
+    public Order cancelOrder(Long orderId, Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("주문을 찾을 수 없습니다. id=" + orderId));
+        if (!order.getUserId().equals(userId)) {
+            throw new OrderNotFoundException("주문을 찾을 수 없습니다. id=" + orderId);
+        }
+        if (order.getStatus() != OrderStatus.PAID) {
+            throw new OrderCannotBeCancelledException(
+                    "취소할 수 없는 주문입니다. 상태: " + order.getStatus());
+        }
+        if (order.getPaymentId() == null) {
+            throw new OrderCannotBeCancelledException("결제 정보가 없어 취소할 수 없습니다.");
+        }
+
+        try {
+            cancelPayment(order.getPaymentId());
+        } catch (Exception ex) {
+            throw new OrderCannotBeCancelledException("결제 취소 실패: " + ex.getMessage());
+        }
+        safelyReleaseStock(order.getUserId(), order.getProductId(), order.getQuantity());
+        order.cancel();
+        return orderRepository.save(order);
+    }
+
+    /** payment-service POST /payments/{id}/cancel 호출. */
+    @Retry(name = "paymentService")
+    @CircuitBreaker(name = "paymentService")
+    void cancelPayment(Long paymentId) {
+        String url = paymentServiceBaseUrl + "/payments/" + paymentId + "/cancel";
+        restTemplate.postForEntity(url, null, Void.class);
     }
 
     /**

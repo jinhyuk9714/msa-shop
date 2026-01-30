@@ -102,4 +102,19 @@ public class OrderController {
         Order order = orderService.getOrder(id);
         return ResponseEntity.ok(OrderResponse.from(order));
     }
+
+    /**
+     * 주문 취소. PAID 상태만 가능. 결제 취소 + 재고 복구 후 CANCELLED.
+     * - 이미 취소됨/결제 정보 없음 → 409 CONFLICT
+     */
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<OrderResponse> cancelOrder(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        Long userId = resolveUserId(xUserId, authorization);
+        Order order = orderService.cancelOrder(id, userId);
+        return ResponseEntity.ok(OrderResponse.from(order));
+    }
 }

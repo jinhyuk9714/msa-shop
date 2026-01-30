@@ -73,11 +73,12 @@
 
 ## order-service (8083)
 
-| 메서드 | 경로           | 설명           | 인증                      |
-| ------ | -------------- | -------------- | ------------------------- |
-| POST   | `/orders`      | 주문 생성      | Bearer JWT 또는 X-User-Id |
-| GET    | `/orders/{id}` | 주문 단건 조회 | Bearer JWT 또는 X-User-Id |
-| GET    | `/orders/me`   | 내 주문 목록   | Bearer JWT 또는 X-User-Id |
+| 메서드 | 경로               | 설명           | 인증                      |
+| ------ | ------------------ | -------------- | ------------------------- |
+| POST   | `/orders`          | 주문 생성      | Bearer JWT 또는 X-User-Id |
+| GET    | `/orders/{id}`     | 주문 단건 조회 | Bearer JWT 또는 X-User-Id |
+| GET    | `/orders/me`       | 내 주문 목록   | Bearer JWT 또는 X-User-Id |
+| PATCH  | `/orders/{id}/cancel` | 주문 취소  | Bearer JWT 또는 X-User-Id |
 
 ### 요청/응답
 
@@ -96,6 +97,12 @@
 
 - **GET /orders/me**  
   Response 200: `[{ "id", "userId", "productId", "quantity", "totalAmount", "status", "createdAt" }, ...]`
+
+- **PATCH /orders/{id}/cancel**  
+  PAID 상태 주문만 취소 가능. 결제 취소 + 재고 복구 후 status=CANCELLED.  
+  Response 200: `{ "id", "userId", "productId", "quantity", "totalAmount", "status": "CANCELLED" }`  
+  Response 409: 이미 취소됨/결제 정보 없음 `{ "error": "CONFLICT", "message": "..." }`  
+  Response 404: 주문 없음 또는 본인 주문 아님
 
 ---
 

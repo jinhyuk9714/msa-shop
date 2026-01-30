@@ -43,6 +43,29 @@
 
 ---
 
+## 1.6 주문 취소 (`PATCH /orders/{id}/cancel`)
+
+### 취소 가능 조건
+
+- **PAID** 상태만 취소 가능.
+- 주문자 본인(userId 일치)만 취소 가능.
+- `paymentId`가 있어야 함(신규 주문은 저장 시 포함).
+
+### 취소 실패 케이스
+
+- **이미 CANCELLED**: `OrderCannotBeCancelledException` → **409 CONFLICT** + `{ "error": "CONFLICT", "message": "취소할 수 없는 주문입니다. 상태: CANCELLED" }`
+- **결제 정보 없음**: (기존 주문에 paymentId 미저장) → **409** + `"결제 정보가 없어 취소할 수 없습니다."`
+- **주문 없음 / 본인 아님**: `OrderNotFoundException` → **404**
+- **결제 취소 실패**: payment-service 404 등 → **409** + `"결제 취소 실패: ..."`
+
+### 취소 성공 시 동작
+
+1. payment-service `POST /payments/{id}/cancel` 호출(결제 취소)
+2. product-service `POST /internal/stocks/release` 호출(재고 복구)
+3. 주문 상태를 **CANCELLED**로 변경
+
+---
+
 ## 2. 인증/인가 실패
 
 ### 2.1 JWT 없음 / 형식 오류 / 만료

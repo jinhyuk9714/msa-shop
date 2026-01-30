@@ -34,19 +34,33 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status;
 
+    /** 결제 ID. 취소 시 payment-service /payments/{id}/cancel 호출에 사용. */
+    @Column(name = "payment_id")
+    private Long paymentId;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
     protected Order() {
     }
 
-    public Order(Long userId, Long productId, int quantity, int totalAmount, OrderStatus status) {
+    public Order(Long userId, Long productId, int quantity, int totalAmount, OrderStatus status, Long paymentId) {
         this.userId = userId;
         this.productId = productId;
         this.quantity = quantity;
         this.totalAmount = totalAmount;
         this.status = status;
+        this.paymentId = paymentId;
         this.createdAt = LocalDateTime.now();
+    }
+
+    /** 테스트·기존 데이터용. paymentId 없으면 취소 불가. */
+    public Order(Long userId, Long productId, int quantity, int totalAmount, OrderStatus status) {
+        this(userId, productId, quantity, totalAmount, status, null);
+    }
+
+    public void cancel() {
+        this.status = OrderStatus.CANCELLED;
     }
 
     public Long getId() {
@@ -75,5 +89,9 @@ public class Order {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public Long getPaymentId() {
+        return paymentId;
     }
 }

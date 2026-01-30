@@ -65,7 +65,7 @@
 
 | 기능 | 설명 |
 |------|------|
-| 주문 취소 API | `PATCH /orders/{id}/cancel` — PAID 이전 상태만 취소 |
+| ~~주문 취소 API~~ | ✅ `PATCH /orders/{id}/cancel` — PAID 주문 취소 (결제 취소 + 재고 복구) |
 | 장바구니 서비스 | 별도 서비스 또는 order-service 확장 |
 | 상품 카테고리 | product-service에 카테고리 필드/테이블 추가 |
 | 상품 검색 | 이름/가격 조건 검색 API |
