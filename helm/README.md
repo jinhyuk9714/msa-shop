@@ -12,8 +12,17 @@ K8s 매니페스트(`k8s/`)를 Helm 차트로 패키지한 버전입니다.
 
 ## 설치
 
+**방법 A) ghcr.io 이미지 사용** (GitHub Actions로 main 푸시 시 자동 빌드된 이미지):
+
 ```bash
-# 로컬 이미지 사용 시 먼저 빌드 (Minikube: eval $(minikube docker-env) 후 실행)
+# values-ghcr.yaml 의 owner를 본인 GitHub 사용자명으로 수정 후
+helm install msa-shop ./helm/msa-shop -f helm/msa-shop/values-ghcr.yaml
+```
+
+**방법 B) 로컬 이미지 사용**:
+
+```bash
+# 먼저 빌드 (Minikube: eval $(minikube docker-env) 후 실행)
 ./k8s/build-local-images.sh
 
 # 기본값으로 설치 (릴리스 이름: msa-shop)
@@ -99,7 +108,11 @@ helm install msa-shop ./helm/msa-shop \
 ## 업그레이드·삭제
 
 ```bash
+# 로컬 이미지
 helm upgrade msa-shop ./helm/msa-shop
+
+# ghcr.io 이미지 (CI로 새 이미지 푸시된 후)
+helm upgrade msa-shop ./helm/msa-shop -f helm/msa-shop/values-ghcr.yaml
 helm uninstall msa-shop
 ```
 

@@ -56,6 +56,7 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 | [`docs/FAILURE-SCENARIOS.md`](docs/FAILURE-SCENARIOS.md)       | 장애/실패 시나리오와 대응 전략             |
 | [`docs/PROFILES-AND-SECRETS.md`](docs/PROFILES-AND-SECRETS.md) | Spring 프로파일(default/prod)·시크릿 관리  |
 | [`docs/NEXT-STEPS.md`](docs/NEXT-STEPS.md)                     | 다음 단계 가이드(관측성·CI/CD·기능 확장)   |
+| [`docs/CI-IMAGES.md`](docs/CI-IMAGES.md)                       | CI 이미지 빌드(ghcr.io)·Helm 배포          |
 
 ## 모듈
 
@@ -73,3 +74,4 @@ GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh
 - **CI**: GitHub Actions — `main` 푸시/PR 시 `./gradlew test` 자동 실행. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 - **K8s**: [`k8s/README.md`](k8s/README.md) — 전체 스택(MySQL, RabbitMQ, 6개 앱, Secret, Ingress) 적용 순서·파일 구성. 배포 후 `kubectl port-forward svc/api-gateway 8080:8080` + `GATEWAY_URL=http://localhost:8080 ./scripts/e2e-flow.sh` 로 E2E 검증.
 - **Helm**: [`helm/README.md`](helm/README.md) — 동일 스택을 Helm 차트로 설치·업그레이드·다중 설치(릴리스별 접두사).
+- **CI 이미지 빌드**: main 푸시 시 6개 서비스 이미지 자동 빌드 → ghcr.io 푸시. [`.github/workflows/build-images.yml`](.github/workflows/build-images.yml). `values-ghcr.yaml` 로 배포.

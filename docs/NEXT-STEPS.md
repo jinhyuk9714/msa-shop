@@ -33,16 +33,13 @@
 
 ---
 
-### 2. CI/CD 확장
+### 2. CI/CD 확장 ✅ 완료
 
-**목표:** Push/PR 시 이미지 빌드 → 레지스트리 푸시 → (선택) K8s 배포
+**구현 내용:** main 푸시 시 6개 서비스 이미지 자동 빌드 → ghcr.io 푸시
 
-- **이미지 빌드·푸시**
-  - GitHub Container Registry(ghcr.io) 또는 Docker Hub
-  - `docker build` + `docker push` 또는 `ko`/`buildpacks`
-- **Helm 차트 배포**
-  - Argo CD 또는 Helm 기반 GitOps
-  - 또는 CI에서 `helm upgrade` 실행 (비권장, GitOps 추천)
+- `.github/workflows/build-images.yml` — 빌드·푸시
+- `helm/msa-shop/values-ghcr.yaml` — ghcr.io 이미지로 Helm 배포
+- 상세: [`docs/CI-IMAGES.md`](CI-IMAGES.md)
 
 ---
 

@@ -1,0 +1,34 @@
+# ghcr.io 레지스트리 이미지 사용 (Build Images 워크플로 실행 후)
+# GitHub 사용자명에 맞게 owner 변경 후: helm upgrade msa-shop ./helm/msa-shop -f helm/msa-shop/values-ghcr.yaml
+global:
+  imagePullPolicy: Always  # 레지스트리 이미지 갱신 반영
+
+apiGateway:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-api-gateway
+    tag: latest
+
+userService:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-user-service
+    tag: latest
+
+productService:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-product-service
+    tag: latest
+
+orderService:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-order-service
+    tag: latest
+
+paymentService:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-payment-service
+    tag: latest
+
+settlementService:
+  image:
+    repository: ghcr.io/jinhyuk9714/msa-shop-settlement-service
+    tag: latest
